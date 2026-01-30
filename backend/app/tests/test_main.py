@@ -19,8 +19,8 @@ def test_register_user():
         "password": "testpass123",
         "role": "user"
     }
-    response = client.post("/auth/register", json=user_data)
-    assert response.status_code == 200
+    response = client.post("/api/auth/register", json=user_data)
+    assert response.status_code == 201
     assert "id" in response.json()
     assert response.json()["email"] == user_data["email"]
 
@@ -34,26 +34,26 @@ def test_login_user():
         "password": "loginpass123",
         "role": "user"
     }
-    client.post("/auth/register", json=user_data)
+    client.post("/api/auth/register", json=user_data)
     
     # Then try to login
     login_data = {
         "username": "loginuser",
         "password": "loginpass123"
     }
-    response = client.post("/auth/login", json=login_data)
+    response = client.post("/api/auth/login", json=login_data)
     assert response.status_code == 200
     assert "access_token" in response.json()
     assert "user" in response.json()
 
 def test_get_categories():
     """Test getting categories"""
-    response = client.get("/categories/")
+    response = client.get("/api/categories/")
     assert response.status_code == 200
     assert isinstance(response.json(), list)
 
 def test_get_content():
     """Test getting content"""
-    response = client.get("/content/")
+    response = client.get("/api/content/")
     assert response.status_code == 200
     assert isinstance(response.json(), list)

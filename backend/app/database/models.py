@@ -28,6 +28,7 @@ class ContentTypeEnum(enum.Enum):
     ARTICLE = "article"
     AUDIO = "audio"
     VIDEO = "video"
+    PODCAST = "podcast"
 
 class ContentStatusEnum(enum.Enum):
     DRAFT = "draft"
@@ -35,6 +36,20 @@ class ContentStatusEnum(enum.Enum):
     APPROVED = "approved"
     PUBLISHED = "published"
     REJECTED = "rejected"
+
+class FlagReasonEnum(enum.Enum):
+    INAPPROPRIATE = "inappropriate"
+    SPAM = "spam"
+    COPYRIGHT = "copyright"
+    MISINFORMATION = "misinformation"
+    OTHER = "other"
+
+class NotificationTypeEnum(enum.Enum):
+    STATUS_CHANGE = "status_change"
+    COMMENT = "comment"
+    LIKE = "like"
+    FOLLOW = "follow"
+    SYSTEM = "system"
 
 class User(Base):
     __tablename__ = "users"
@@ -97,6 +112,7 @@ class Content(Base):
     status = Column(Enum(ContentStatusEnum), default=ContentStatusEnum.DRAFT)
     media_url = Column(String)  # For audio/video files
     thumbnail_url = Column(String)
+    tags = Column(String)  # Comma-separated tags
     author_id = Column(Integer, ForeignKey("users.id"))
     category_id = Column(Integer, ForeignKey("categories.id"))
     likes_count = Column(Integer, default=0)
@@ -119,14 +135,14 @@ class Comment(Base):
     content_id = Column(Integer, ForeignKey("content.id"))
     author_id = Column(Integer, ForeignKey("users.id"))
     parent_id = Column(Integer, ForeignKey("comments.id"))  # For nested comments
-    text = Column(Text, nullable=False)
+    content_text = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     content = relationship("Content", back_populates="comments")
     author = relationship("User", back_populates="comments")
     parent = relationship("Comment", remote_side=[id])
-    replies = relationship("Comment")
+    replies = relationship("Comment", overlaps="parent")
 
 class Like(Base):
     __tablename__ = "likes"
@@ -145,9 +161,25 @@ class Notification(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
+    notification_type = Column(Enum(NotificationTypeEnum), default=NotificationTypeEnum.SYSTEM)
     title = Column(String, nullable=False)
     message = Column(Text, nullable=False)
     is_read = Column(Boolean, default=False)
+    related_content_id = Column(Integer, ForeignKey("content.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     user = relationship("User", back_populates="notifications")
+
+class ContentFlag(Base):
+    __tablename__ = "content_flags"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    content_id = Column(Integer, ForeignKey("content.id"), nullable=False)
+    flagged_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    reason = Column(Enum(FlagReasonEnum), nullable=False)
+    description = Column(Text)
+    is_resolved = Column(Boolean, default=False)
+    resolved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    resolved_at = Column(DateTime(timezone=True), nullable=True)
+    admin_notes = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

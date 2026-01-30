@@ -2,17 +2,17 @@ import { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { Heart, MessageCircle, Share2, Bookmark, Play, FileText, Headphones, Eye } from 'lucide-react'
-import { toggleWishlist } from '../features/wishlist/wishlistSlice'
+import { addToWishlist, removeFromWishlist } from '../features/wishlist/wishlistSlice'
 import { likeContent } from '../features/content/contentSlice'
 import CategoryTag from './CategoryTag'
 
-const ContentCard = ({ content }) => {
+const ContentCard = ({ content, compact = false, onLike, onSaveToWishlist, showActions = true }) => {
   const dispatch = useDispatch()
   const { user } = useSelector((state) => state.auth)
   const { items: wishlistItems } = useSelector((state) => state.wishlist)
   
   const [isLiked, setIsLiked] = useState(content.isLiked)
-  const [likesCount, setLikesCount] = useState(content.likesCount || 0)
+  const [likesCount, setLikesCount] = useState(content.likes_count || 0)
   
   const isInWishlist = wishlistItems.some(item => item.id === content.id)
 
@@ -20,9 +20,13 @@ const ContentCard = ({ content }) => {
     if (!user) return
     
     try {
-      await dispatch(likeContent(content.id)).unwrap()
-      setIsLiked(!isLiked)
-      setLikesCount(prev => isLiked ? prev - 1 : prev + 1)
+      if (onLike) {
+        onLike(content.id)
+      } else {
+        await dispatch(likeContent({ contentId: content.id, isLike: true })).unwrap()
+        setIsLiked(!isLiked)
+        setLikesCount(prev => isLiked ? prev - 1 : prev + 1)
+      }
     } catch (error) {
       console.error('Failed to like content:', error)
     }
@@ -30,98 +34,139 @@ const ContentCard = ({ content }) => {
 
   const handleWishlist = () => {
     if (!user) return
-    dispatch(toggleWishlist(content))
-  }
-
-  const getContentIcon = () => {
-    switch (content.type) {
-      case 'video': return <Play size={16} className="text-red-500" />
-      case 'audio': return <Headphones size={16} className="text-green-500" />
-      default: return <FileText size={16} className="text-blue-500" />
+    if (onSaveToWishlist) {
+      onSaveToWishlist(content.id)
+    } else {
+      if (isInWishlist) {
+        dispatch(removeFromWishlist(content.id))
+      } else {
+        dispatch(addToWishlist(content.id))
+      }
     }
   }
 
+  const getContentIcon = () => {
+    switch (content.content_type) {
+      case 'video': return <Play size={16} className="text-red-500" />
+      case 'podcast': return <Headphones size={16} className="text-purple-500" />
+      case 'article': return <FileText size={16} className="text-blue-500" />
+      default: return <FileText size={16} className="text-gray-500" />
+    }
+  }
+
+  const getThumbnail = () => {
+    if (content.thumbnail_url) {
+      return content.thumbnail_url
+    }
+    // Fallback thumbnail based on content type
+    const typeImages = {
+      video: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=400&h=225&fit=crop&auto=format&q=80',
+      podcast: 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=400&h=225&fit=crop&auto=format&q=80',
+      article: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?w=400&h=225&fit=crop&auto=format&q=80'
+    }
+    return typeImages[content.content_type] || typeImages.article
+  }
+
   return (
-    <div className="card group hover:scale-[1.02] animate-fade-in">
-      {content.thumbnail && (
-        <div className="relative mb-4 overflow-hidden rounded-xl">
-          <img 
-            src={content.thumbnail} 
-            alt={content.title}
-            className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-110"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-          <div className="absolute top-3 left-3 glass text-white px-3 py-1.5 rounded-full flex items-center gap-2 text-sm font-medium">
+    <div className={`card group hover:scale-[1.02] animate-fade-in ${compact ? 'p-4' : 'p-6'}`}>
+      <div className="flex flex-col h-full">
+        {/* Thumbnail */}
+        {!compact && (
+          <div className="aspect-video bg-gray-200 rounded-lg overflow-hidden mb-4 relative">
+            <img
+              src={getThumbnail()}
+              alt={content.title}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.target.src = 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=400&h=225&fit=crop&auto=format&q=80'
+              }}
+            />
+            <div className="absolute top-2 left-2">
+              <span className="px-2 py-1 bg-black bg-opacity-75 text-white text-xs rounded-full capitalize">
+                {content.content_type}
+              </span>
+            </div>
+            {content.category && (
+              <div className="absolute top-2 right-2">
+                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                  {content.category.name}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Header */}
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-2">
             {getContentIcon()}
-            <span className="capitalize">{content.type}</span>
+            <span className="px-2 py-1 bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 text-xs rounded-full capitalize">
+              {content.content_type}
+            </span>
           </div>
-          <div className="absolute bottom-3 right-3 glass text-white px-2 py-1 rounded-lg flex items-center gap-1 text-xs">
-            <Eye size={12} />
-            <span>{content.views || 0}</span>
-          </div>
+          <span className="text-xs text-gray-500">
+            {new Date(content.created_at).toLocaleDateString()}
+          </span>
         </div>
-      )}
-      
-      <div className="space-y-4">
-        <div className="flex items-start justify-between">
-          <Link to={`/content/${content.id}`} className="flex-1 group">
-            <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2 leading-tight">
+
+        {/* Content */}
+        <div className="flex-1">
+          <Link to={`/content/${content.id}`}>
+            <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 hover:text-blue-600 transition-colors">
               {content.title}
             </h3>
           </Link>
-        </div>
-        
-        <p className="text-gray-600 text-sm line-clamp-3 leading-relaxed">{content.description}</p>
-        
-        <div className="flex flex-wrap gap-2">
-          {content.categories?.slice(0, 2).map(category => (
-            <CategoryTag key={category.id} category={category} />
-          ))}
-          {content.categories?.length > 2 && (
-            <span className="text-xs text-gray-500 px-2 py-1 bg-gray-100 rounded-full">
-              +{content.categories.length - 2} more
-            </span>
+          {!compact && (
+            <p className="text-gray-600 text-sm mb-4 line-clamp-3">
+              {content.content_text}
+            </p>
           )}
         </div>
-        
-        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
-              {content.author?.name?.charAt(0) || 'A'}
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-900">{content.author?.name}</p>
-              <p className="text-xs text-gray-500">{new Date(content.createdAt).toLocaleDateString()}</p>
-            </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+          <div className="flex items-center gap-4 text-sm text-gray-500">
+            <span className="flex items-center gap-1">
+              <Eye size={14} />
+              {content.views_count || 0}
+            </span>
+            <span className="flex items-center gap-1">
+              <Heart size={14} />
+              {likesCount}
+            </span>
+            <span className="flex items-center gap-1">
+              <MessageCircle size={14} />
+              {content.comments_count || 0}
+            </span>
           </div>
           
-          <div className="flex items-center gap-1">
-            <button 
-              onClick={handleLike}
-              className={`flex items-center gap-1 p-2 rounded-xl transition-all hover:scale-110 ${
-                isLiked ? 'text-red-500 bg-red-50' : 'text-gray-500 hover:text-red-500 hover:bg-red-50'
-              }`}
-            >
-              <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
-              <span className="text-sm font-medium">{likesCount}</span>
-            </button>
-            
-            <Link to={`/content/${content.id}#comments`} className="flex items-center gap-1 p-2 text-gray-500 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-all hover:scale-110">
-              <MessageCircle size={16} />
-              <span className="text-sm font-medium">{content.commentsCount || 0}</span>
-            </Link>
-            
-            {user && (
-              <button 
+          {showActions && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleLike}
+                className={`p-2 rounded-lg transition-colors ${
+                  isLiked
+                    ? 'text-red-600 bg-red-50'
+                    : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
+                }`}
+              >
+                <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
+              </button>
+              <button
                 onClick={handleWishlist}
-                className={`p-2 rounded-xl transition-all hover:scale-110 ${
-                  isInWishlist ? 'text-yellow-500 bg-yellow-50' : 'text-gray-500 hover:text-yellow-500 hover:bg-yellow-50'
+                className={`p-2 rounded-lg transition-colors ${
+                  isInWishlist
+                    ? 'text-blue-600 bg-blue-50'
+                    : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
                 }`}
               >
                 <Bookmark size={16} fill={isInWishlist ? 'currentColor' : 'none'} />
               </button>
-            )}
-          </div>
+              <button className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors">
+                <Share2 size={16} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

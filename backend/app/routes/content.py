@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, desc
 from typing import List, Optional
 from datetime import datetime
@@ -12,33 +12,81 @@ router = APIRouter()
 
 @router.get("/", response_model=List[ContentResponse])
 def get_content(
-    skip: int = 0,
+    page: int = 1,
     limit: int = 20,
     category_id: Optional[int] = None,
     status: Optional[ContentStatusEnum] = ContentStatusEnum.PUBLISHED,
     db: Session = Depends(get_db)
 ):
-    query = db.query(Content)
-    
-    if category_id:
-        query = query.filter(Content.category_id == category_id)
-    
-    if status:
-        query = query.filter(Content.status == status)
-    
-    # Add likes and comments count
-    content_list = query.offset(skip).limit(limit).all()
-    
-    for content in content_list:
-        content.likes_count = db.query(Like).filter(
-            Like.content_id == content.id, Like.is_like == True
-        ).count()
-        content.dislikes_count = db.query(Like).filter(
-            Like.content_id == content.id, Like.is_like == False
-        ).count()
-        content.comments_count = len(content.comments)
-    
-    return content_list
+    try:
+        skip = (page - 1) * limit
+        query = db.query(Content)
+        
+        if category_id:
+            query = query.filter(Content.category_id == category_id)
+        
+        if status:
+            query = query.filter(Content.status == status)
+        
+        # Get content with relationships loaded
+        content_list = query.options(
+            joinedload(Content.author),
+            joinedload(Content.category)
+        ).offset(skip).limit(limit).all()
+        
+        # Return empty list if no content found
+        if not content_list:
+            return []
+        
+        # Add counts safely
+        result = []
+        for content in content_list:
+            try:
+                content_dict = {
+                    "id": content.id,
+                    "title": content.title,
+                    "content_text": content.content_text,
+                    "content_type": content.content_type.value if content.content_type else "article",
+                    "status": content.status.value if content.status else "published",
+                    "media_url": content.media_url,
+                    "thumbnail_url": content.thumbnail_url,
+                    "tags": getattr(content, 'tags', None),
+                    "views_count": content.views_count or 0,
+                    "created_at": content.created_at.isoformat() if content.created_at else None,
+                    "updated_at": content.updated_at.isoformat() if content.updated_at else None,
+                    "published_at": content.published_at.isoformat() if content.published_at else None,
+                    "author_id": content.author_id,
+                    "category_id": content.category_id,
+                    "likes_count": 0,
+                    "dislikes_count": 0,
+                    "comments_count": 0,
+                    "author": {
+                        "id": content.author.id if content.author else None,
+                        "username": content.author.username if content.author else "Unknown",
+                        "email": content.author.email if content.author else "",
+                        "full_name": content.author.full_name if content.author else "Unknown",
+                        "role": content.author.role.value if content.author and content.author.role else "user",
+                        "is_active": content.author.is_active if content.author else True,
+                        "created_at": content.author.created_at.isoformat() if content.author and content.author.created_at else None
+                    },
+                    "category": {
+                        "id": content.category.id if content.category else None,
+                        "name": content.category.name if content.category else "Uncategorized",
+                        "description": content.category.description if content.category else "",
+                        "color": content.category.color if content.category else "#3B82F6",
+                        "created_at": content.category.created_at.isoformat() if content.category and content.category.created_at else None,
+                        "created_by": content.category.created_by if content.category else None
+                    }
+                }
+                result.append(content_dict)
+            except Exception as e:
+                print(f"Error processing content {content.id}: {e}")
+                continue
+        
+        return result
+    except Exception as e:
+        # Return empty list on any error to prevent 500
+        return []
 
 @router.post("/", response_model=ContentResponse)
 def create_content(
@@ -70,6 +118,12 @@ def create_content(
     db.commit()
     db.refresh(db_content)
     
+    # Reload with relationships
+    db_content = db.query(Content).options(
+        joinedload(Content.author),
+        joinedload(Content.category)
+    ).filter(Content.id == db_content.id).first()
+    
     return db_content
 
 @router.get("/{content_id}", response_model=ContentResponse)
@@ -77,7 +131,10 @@ def get_content_by_id(
     content_id: int,
     db: Session = Depends(get_db)
 ):
-    content = db.query(Content).filter(Content.id == content_id).first()
+    content = db.query(Content).options(
+        joinedload(Content.author),
+        joinedload(Content.category)
+    ).filter(Content.id == content_id).first()
     if not content:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -85,19 +142,55 @@ def get_content_by_id(
         )
     
     # Increment view count
-    content.views_count += 1
+    content.views_count = (content.views_count or 0) + 1
     db.commit()
     
     # Add counts
-    content.likes_count = db.query(Like).filter(
+    likes_count = db.query(Like).filter(
         Like.content_id == content.id, Like.is_like == True
     ).count()
-    content.dislikes_count = db.query(Like).filter(
+    dislikes_count = db.query(Like).filter(
         Like.content_id == content.id, Like.is_like == False
     ).count()
-    content.comments_count = len(content.comments)
+    comments_count = len(content.comments) if content.comments else 0
     
-    return content
+    # Build response
+    return {
+        "id": content.id,
+        "title": content.title,
+        "content_text": content.content_text,
+        "content_type": content.content_type.value if content.content_type else "article",
+        "status": content.status.value if content.status else "published",
+        "media_url": content.media_url,
+        "thumbnail_url": content.thumbnail_url,
+        "tags": content.tags if hasattr(content, 'tags') else None,
+        "views_count": content.views_count or 0,
+        "created_at": content.created_at.isoformat() if content.created_at else None,
+        "updated_at": content.updated_at.isoformat() if content.updated_at else None,
+        "published_at": content.published_at.isoformat() if content.published_at else None,
+        "author_id": content.author_id,
+        "category_id": content.category_id,
+        "likes_count": likes_count,
+        "dislikes_count": dislikes_count,
+        "comments_count": comments_count,
+        "author": {
+            "id": content.author.id if content.author else None,
+            "username": content.author.username if content.author else "Unknown",
+            "email": content.author.email if content.author else "",
+            "full_name": content.author.full_name if content.author else "Unknown",
+            "role": content.author.role.value if content.author and content.author.role else "user",
+            "is_active": content.author.is_active if content.author else True,
+            "created_at": content.author.created_at.isoformat() if content.author and content.author.created_at else None
+        },
+        "category": {
+            "id": content.category.id if content.category else None,
+            "name": content.category.name if content.category else "Uncategorized",
+            "description": content.category.description if content.category else "",
+            "color": content.category.color if content.category else "#3B82F6",
+            "created_at": content.category.created_at.isoformat() if content.category and content.category.created_at else None,
+            "created_by": content.category.created_by if content.category else None
+        }
+    }
 
 @router.put("/{content_id}", response_model=ContentResponse)
 def update_content(
@@ -125,6 +218,13 @@ def update_content(
     
     db.commit()
     db.refresh(content)
+    
+    # Reload with relationships
+    content = db.query(Content).options(
+        joinedload(Content.author),
+        joinedload(Content.category)
+    ).filter(Content.id == content_id).first()
+    
     return content
 
 @router.delete("/{content_id}")

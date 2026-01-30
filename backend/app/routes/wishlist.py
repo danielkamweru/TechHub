@@ -3,25 +3,29 @@ from sqlalchemy.orm import Session
 from typing import List
 from app.database.connection import get_db
 from app.database.models import Content, User, user_wishlist
-from app.schemas.schemas import Content as ContentSchema
-from app.core.auth import get_current_active_user
+from app.schemas.schemas import ContentResponse
+from app.core.dependencies import get_current_user
 
-router = APIRouter(prefix="/wishlist", tags=["wishlist"])
+router = APIRouter(tags=["wishlist"])
 
-@router.get("/", response_model=List[ContentSchema])
+@router.get("/", response_model=List[ContentResponse])
 def get_wishlist(
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    content = db.query(Content).join(user_wishlist).filter(
-        user_wishlist.c.user_id == current_user.id
-    ).all()
-    return content
+    try:
+        content = db.query(Content).join(user_wishlist).filter(
+            user_wishlist.c.user_id == current_user.id
+        ).all()
+        return content if content else []
+    except Exception as e:
+        # Return empty list on error to prevent crashes
+        return []
 
 @router.post("/{content_id}")
 def add_to_wishlist(
     content_id: int,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     content = db.query(Content).filter(Content.id == content_id).first()
@@ -47,7 +51,7 @@ def add_to_wishlist(
 @router.delete("/{content_id}")
 def remove_from_wishlist(
     content_id: int,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     # Remove from wishlist

@@ -2,36 +2,48 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database.connection import engine
 from app.database.models import Base
-from app.routes import auth, users, content, comments, categories, notifications
+from app.routes import auth, users, content, comments, categories, notifications, wishlist
 import logging
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Create database tables with error handling
-try:
-    Base.metadata.create_all(bind=engine)
-    logger.info(" Database tables created successfully")
-except Exception as e:
-    logger.error(f" Database connection failed: {e}")
-    logger.info("The API will start but database operations will fail until database is properly configured")
-
 app = FastAPI(title="Moringa TechHub API", version="1.0.0")
 
+# Configure CORS middleware - MUST be added right after app creation
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        "http://localhost:3001",
+        "http://localhost:3001", 
         "http://localhost:3003",
         "http://localhost:3004",
+        "http://localhost:3005",
         "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:8000",
+        "http://localhost:8001",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3005",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+        "http://127.0.0.1:8000",
+        "http://127.0.0.1:8001",
     ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
+
+# Create database tables with error handling
+try:
+    Base.metadata.create_all(bind=engine)
+    logger.info("Database tables created successfully")
+except Exception as e:
+    logger.error(f"Database connection failed: {e}")
+    logger.info("The API will start but database operations will fail until database is properly configured")
 
 # Include routers
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
@@ -39,6 +51,8 @@ app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(content.router, prefix="/api/content", tags=["Content"])
 app.include_router(categories.router, prefix="/api/categories", tags=["Categories"])
 app.include_router(comments.router, prefix="/api/comments", tags=["Comments"])
+app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
+app.include_router(wishlist.router, prefix="/api/wishlist", tags=["Wishlist"])
 
 @app.get("/")
 async def root():
@@ -48,8 +62,9 @@ async def root():
 async def health_check():
     try:
         # Test database connection
+        from sqlalchemy import text
         with engine.connect() as conn:
-            conn.execute("SELECT 1")
+            conn.execute(text("SELECT 1"))
         return {"status": "healthy", "database": "connected"}
     except Exception as e:
         return {"status": "unhealthy", "database": "disconnected", "error": str(e)}

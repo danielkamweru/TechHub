@@ -52,6 +52,28 @@ class UserResponse(UserBase):
 
     class Config:
         from_attributes = True
+    
+    @model_validator(mode="before")
+    @classmethod
+    def extract_profile_data(cls, data):
+        """Extract bio and avatar_url from profile relationship if present"""
+        try:
+            if hasattr(data, 'profile') and data.profile:
+                if not hasattr(data, 'bio') or data.bio is None:
+                    data.bio = data.profile.bio if data.profile.bio else None
+                if not hasattr(data, 'avatar_url') or data.avatar_url is None:
+                    data.avatar_url = data.profile.avatar_url if data.profile.avatar_url else None
+            elif isinstance(data, dict):
+                # Handle dict input (from manual construction)
+                if 'profile' in data and data['profile']:
+                    if 'bio' not in data or data['bio'] is None:
+                        data['bio'] = data['profile'].bio if hasattr(data['profile'], 'bio') and data['profile'].bio else None
+                    if 'avatar_url' not in data or data['avatar_url'] is None:
+                        data['avatar_url'] = data['profile'].avatar_url if hasattr(data['profile'], 'avatar_url') and data['profile'].avatar_url else None
+        except Exception:
+            # If profile extraction fails, just use None values
+            pass
+        return data
 
 
 # =========================

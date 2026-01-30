@@ -46,6 +46,18 @@ export const checkAuth = createAsyncThunk(
   }
 )
 
+export const updateUserProfile = createAsyncThunk(
+  'auth/updateUserProfile',
+  async (profileData, { rejectWithValue }) => {
+    try {
+      const response = await api.put('/auth/profile', profileData)
+      return response.data
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Profile update failed')
+    }
+  }
+)
+
 const authSlice = createSlice({
   name: 'auth',
   initialState: {
@@ -96,10 +108,24 @@ const authSlice = createSlice({
         state.loading = false
         state.error = action.payload
       })
+      .addCase(checkAuth.pending, (state) => {
+        state.loading = true
+      })
       .addCase(checkAuth.fulfilled, (state, action) => {
+        state.loading = false
         state.user = action.payload.user
         state.token = action.payload.token
         state.isAuthenticated = true
+        state.error = null
+      })
+      .addCase(checkAuth.rejected, (state) => {
+        state.loading = false
+        state.isAuthenticated = false
+        state.user = null
+        state.token = null
+      })
+      .addCase(updateUserProfile.fulfilled, (state, action) => {
+        state.user = action.payload
       })
   },
 })

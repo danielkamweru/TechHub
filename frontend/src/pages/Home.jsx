@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { Search, Filter, TrendingUp, Sparkles } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Search, Sparkles } from 'lucide-react'
 import ContentCard from '../components/ContentCard'
-import CategoryTag from '../components/CategoryTag'
 import Loader from '../components/Loader'
 import { fetchContent, setFilters } from '../features/content/contentSlice'
 import { fetchCategories } from '../features/categories/categoriesSlice'
@@ -10,28 +10,23 @@ import { fetchCategories } from '../features/categories/categoriesSlice'
 const Home = () => {
   const dispatch = useDispatch()
   const { items: content, loading, filters, pagination } = useSelector((state) => state.content)
-  const { items: categories } = useSelector((state) => state.categories)
+  const { isAuthenticated } = useSelector((state) => state.auth)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState(null)
 
   useEffect(() => {
     dispatch(fetchCategories())
-    dispatch(fetchContent())
+    dispatch(fetchContent({ limit: 50 }))
   }, [dispatch])
 
   useEffect(() => {
     const delayedSearch = setTimeout(() => {
       dispatch(setFilters({ search: searchTerm, category: selectedCategory }))
-      dispatch(fetchContent({ search: searchTerm, category: selectedCategory }))
+      dispatch(fetchContent({ search: searchTerm, category: selectedCategory, limit: 50 }))
     }, 500)
 
     return () => clearTimeout(delayedSearch)
   }, [searchTerm, selectedCategory, dispatch])
-
-  const handleCategorySelect = (category) => {
-    const newCategory = selectedCategory === category.id ? null : category.id
-    setSelectedCategory(newCategory)
-  }
 
   return (
     <div className="min-h-screen">
@@ -49,9 +44,49 @@ const Home = () => {
           <h1 className="text-5xl md:text-7xl font-bold mb-6 animate-fade-in">
             Welcome to <span className="bg-gradient-to-r from-yellow-300 to-orange-300 bg-clip-text text-transparent">Moringa TechHub</span>
           </h1>
-          <p className="text-xl md:text-2xl mb-10 opacity-90 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xl md:text-2xl mb-8 opacity-90 max-w-3xl mx-auto leading-relaxed">
             Discover authentic tech content, connect with industry experts, and accelerate your journey in technology
           </p>
+          
+          {/* AWS Video */}
+          <div className="max-w-4xl mx-auto mb-10">
+            <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-black/20 backdrop-blur-sm p-1">
+              <div className="relative rounded-xl overflow-hidden">
+                <iframe
+                  className="w-full h-64 md:h-96 rounded-xl"
+                  src="https://www.youtube.com/embed/VIEiR-mia0c?autoplay=0&mute=1&controls=1&modestbranding=1&rel=0"
+                  title="AWS Full Course for Beginners - Tech Learning"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none rounded-xl" />
+                <div className="absolute bottom-4 left-4 text-white">
+                  <div className="bg-black/60 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium">
+                    🚀 Start Your Cloud Journey
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Create Account CTA */}
+          {!isAuthenticated && (
+            <div className="mb-8">
+              <Link 
+                to="/register" 
+                className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold text-lg rounded-2xl hover:from-yellow-500 hover:to-orange-600 transform hover:scale-105 transition-all duration-300 shadow-2xl hover:shadow-yellow-500/25"
+              >
+                <Sparkles className="mr-3" size={24} />
+                Create Your Free Account
+              </Link>
+              <p className="mt-4 text-white/80 text-sm">
+                Join thousands of tech enthusiasts sharing knowledge
+              </p>
+            </div>
+          )}
+          
+          {/* Search Bar */}
           <div className="max-w-2xl mx-auto relative group">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-400 rounded-2xl blur opacity-75 group-hover:opacity-100 transition-opacity" />
             <div className="relative glass p-2 rounded-2xl">
@@ -68,35 +103,33 @@ const Home = () => {
         </div>
       </div>
 
+      {/* Full Stack Video Section + Content Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Categories Filter */}
+        {/* Full Stack Development Video */}
         <div className="mb-12">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="flex items-center gap-2">
-              <Filter size={24} className="text-blue-600" />
-              <h2 className="text-2xl font-bold text-gray-900">Explore Categories</h2>
-            </div>
-            <TrendingUp size={20} className="text-green-500" />
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Full Stack Development Guide</h2>
+            <p className="text-gray-600 text-lg">A comprehensive roadmap to become a full-stack developer</p>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={() => setSelectedCategory(null)}
-              className={`px-6 py-3 rounded-xl font-semibold transition-all transform hover:scale-105 ${
-                !selectedCategory 
-                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' 
-                  : 'bg-white/80 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200 shadow-md'
-              }`}
-            >
-              All Categories
-            </button>
-            {categories.map(category => (
-              <CategoryTag
-                key={category.id}
-                category={category}
-                onClick={handleCategorySelect}
-                isSelected={selectedCategory === category.id}
-              />
-            ))}
+          <div className="max-w-4xl mx-auto">
+            <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-black/20 backdrop-blur-sm p-1">
+              <div className="relative rounded-xl overflow-hidden">
+                <iframe
+                  className="w-full h-64 md:h-96 rounded-xl"
+                  src="https://www.youtube.com/embed/Q33KBiDriJY?autoplay=0&mute=1&controls=1&modestbranding=1&rel=0"
+                  title="Full Stack Web Development Tutorial"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none rounded-xl" />
+                <div className="absolute bottom-4 left-4 text-white">
+                  <div className="bg-black/60 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium">
+                    💻 FreeCodeCamp • 11:45:21
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -104,47 +137,31 @@ const Home = () => {
         {loading ? (
           <div className="flex justify-center py-20">
             <div className="text-center">
-              <Loader size="lg" />
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
               <p className="mt-4 text-gray-600 font-medium">Loading amazing content...</p>
             </div>
           </div>
         ) : (
           <>
-            {content.length > 0 && (
+            {(content || []).length > 0 && (
               <div className="mb-8">
                 <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
                   <Sparkles className="text-blue-600" size={20} />
-                  Featured Content ({content.length})
+                  Featured Content ({(content || []).length})
                 </h3>
               </div>
             )}
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-              {content.map((item, index) => (
+              {(content || []).map((item, index) => (
                 <div key={item.id} className="animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
                   <ContentCard content={item} />
                 </div>
               ))}
             </div>
 
-            {content.length === 0 && (
-              <div className="text-center py-20">
-                <div className="glass p-12 rounded-3xl max-w-md mx-auto">
-                  <Search size={64} className="mx-auto text-gray-400 mb-6" />
-                  <h3 className="text-2xl font-bold text-gray-900 mb-4">No content found</h3>
-                  <p className="text-gray-600 mb-6">Try adjusting your search or explore different categories</p>
-                  <button 
-                    onClick={() => { setSearchTerm(''); setSelectedCategory(null) }}
-                    className="btn-primary"
-                  >
-                    Reset Filters
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* Pagination */}
-            {pagination.totalPages > 1 && (
+            {(pagination && pagination.totalPages > 1) && (
               <div className="flex justify-center gap-2">
                 {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(page => (
                   <button

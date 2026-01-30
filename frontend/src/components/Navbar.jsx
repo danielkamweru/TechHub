@@ -35,6 +35,9 @@ const Navbar = () => {
             <Link to="/" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
               Home
             </Link>
+            <Link to="/explore" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+              Explore
+            </Link>
             {isAuthenticated && (
               <>
                 <Link to="/wishlist" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
@@ -45,8 +48,8 @@ const Navbar = () => {
                     Admin
                   </Link>
                 )}
-                {user?.role === 'writer' && (
-                  <Link to="/writer" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+                {user?.role === 'tech_writer' && (
+                  <Link to="/tech-writer" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
                     Writer
                   </Link>
                 )}
@@ -97,6 +100,9 @@ const Navbar = () => {
           <div className="px-2 pt-2 pb-3 space-y-1">
             <Link to="/" className="block px-3 py-2 text-gray-700 hover:bg-blue-50 rounded-xl font-medium transition-colors">
               Home
+            </Link>
+            <Link to="/explore" className="block px-3 py-2 text-gray-700 hover:bg-blue-50 rounded-xl font-medium transition-colors">
+              Explore
             </Link>
             {isAuthenticated ? (
               <>

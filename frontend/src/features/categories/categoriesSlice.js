@@ -11,9 +11,34 @@ export const createCategory = createAsyncThunk('categories/createCategory', asyn
   return response.data
 })
 
+export const updateCategory = createAsyncThunk('categories/updateCategory', async ({ id, ...categoryData }) => {
+  const response = await api.put(`/categories/${id}`, categoryData)
+  return response.data
+})
+
+export const deleteCategory = createAsyncThunk('categories/deleteCategory', async (id) => {
+  await api.delete(`/categories/${id}`)
+  return id
+})
+
+export const subscribeToCategory = createAsyncThunk('categories/subscribeToCategory', async (categoryId) => {
+  const response = await api.post(`/categories/${categoryId}/subscribe`)
+  return response.data
+})
+
+export const unsubscribeFromCategory = createAsyncThunk('categories/unsubscribeFromCategory', async (categoryId) => {
+  const response = await api.post(`/categories/${categoryId}/unsubscribe`)
+  return response.data
+})
+
 const categoriesSlice = createSlice({
   name: 'categories',
-  initialState: { items: [], loading: false, error: null },
+  initialState: {
+    items: [],
+    loading: false,
+    error: null,
+  },
+  reducers: {},
   extraReducers: (builder) => {
     builder
       .addCase(fetchCategories.fulfilled, (state, action) => {
@@ -21,6 +46,15 @@ const categoriesSlice = createSlice({
       })
       .addCase(createCategory.fulfilled, (state, action) => {
         state.items.push(action.payload)
+      })
+      .addCase(updateCategory.fulfilled, (state, action) => {
+        const index = state.items.findIndex(category => category.id === action.payload.id)
+        if (index !== -1) {
+          state.items[index] = action.payload
+        }
+      })
+      .addCase(deleteCategory.fulfilled, (state, action) => {
+        state.items = state.items.filter(item => item.id !== action.payload)
       })
   },
 })

@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 const Footer = () => {
   return (
     <footer className="bg-gray-800 text-white mt-auto">
@@ -12,22 +14,22 @@ const Footer = () => {
           <div>
             <h4 className="text-md font-semibold mb-4">Quick Links</h4>
             <ul className="space-y-2 text-gray-300">
-              <li><a href="/" className="hover:text-white transition-colors">Home</a></li>
-              <li><a href="/about" className="hover:text-white transition-colors">About</a></li>
-              <li><a href="/contact" className="hover:text-white transition-colors">Contact</a></li>
+              <li><Link to="/" className="hover:text-white transition-colors">Home</Link></li>
+              <li><Link to="/explore" className="hover:text-white transition-colors">Explore</Link></li>
+              <li><Link to="/about" className="hover:text-white transition-colors">About</Link></li>
             </ul>
           </div>
           <div>
             <h4 className="text-md font-semibold mb-4">Categories</h4>
             <ul className="space-y-2 text-gray-300">
-              <li><a href="/category/fullstack" className="hover:text-white transition-colors">Full Stack</a></li>
-              <li><a href="/category/frontend" className="hover:text-white transition-colors">Frontend</a></li>
-              <li><a href="/category/devops" className="hover:text-white transition-colors">DevOps</a></li>
+              <li><Link to="/explore?category=Full-Stack" className="hover:text-white transition-colors">Full Stack</Link></li>
+              <li><Link to="/explore?category=Front-End" className="hover:text-white transition-colors">Frontend</Link></li>
+              <li><Link to="/explore?category=DevOps" className="hover:text-white transition-colors">DevOps</Link></li>
             </ul>
           </div>
         </div>
         <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-300">
-          <p>&copy; 2024 Moringa TechHub. All rights reserved.</p>
+          <p>&copy; 2026 Moringa TechHub. All rights reserved.</p>
         </div>
       </div>
     </footer>

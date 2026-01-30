@@ -1,30 +1,19 @@
 import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Eye, EyeOff, LogIn, User, PenTool, Shield } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Eye, EyeOff, LogIn, Sparkles } from 'lucide-react'
 import { login, clearError } from '../features/auth/authSlice'
-import Loader from '../components/Loader'
 
 const Login = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
   const { loading, error, isAuthenticated } = useSelector((state) => state.auth)
-  
-  const preselectedRole = searchParams.get('role')
   
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    role: preselectedRole || 'user',
   })
   const [showPassword, setShowPassword] = useState(false)
-
-  const roleOptions = [
-    { value: 'user', label: 'User', icon: User, color: 'text-blue-600' },
-    { value: 'writer', label: 'Tech Writer', icon: PenTool, color: 'text-purple-600' },
-    { value: 'admin', label: 'Admin', icon: Shield, color: 'text-red-600' }
-  ]
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -49,70 +38,27 @@ const Login = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen flex items-center justify-center gradient-hero py-12 px-4">
+      <div className="absolute inset-0 gradient-mesh opacity-20"></div>
+      <div className="max-w-md w-full space-y-8 relative">
         <div className="text-center">
-          <div className="mx-auto h-16 w-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mb-6">
-            <LogIn className="h-8 w-8 text-white" />
+          <div className="flex items-center justify-center mb-6">
+            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-2xl">
+              <LogIn className="h-8 w-8 text-white" />
+            </div>
           </div>
-          <h2 className="text-3xl font-extrabold text-gray-900">
-            Sign in to your account
+          <h2 className="text-4xl font-bold text-white mb-2">
+            Welcome Back
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Or{' '}
-            <Link to="/role-selection" className="font-medium text-blue-600 hover:text-blue-500">
-              choose your role to get started
-            </Link>
+          <p className="text-white/80 text-lg">
+            Sign in to continue your tech journey
           </p>
         </div>
-
-        <form className="mt-8 space-y-6 card" onSubmit={handleSubmit}>
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl">
-              {error}
-            </div>
-          )}
-
-          <div className="space-y-4">
+        
+        <div className="glass p-8 rounded-2xl shadow-2xl">
+          <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">
-                Login as
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {roleOptions.map((option) => {
-                  const IconComponent = option.icon
-                  return (
-                    <label key={option.value} className="cursor-pointer">
-                      <input
-                        type="radio"
-                        name="role"
-                        value={option.value}
-                        checked={formData.role === option.value}
-                        onChange={handleChange}
-                        className="sr-only"
-                      />
-                      <div className={`p-3 rounded-xl border-2 transition-all text-center ${
-                        formData.role === option.value
-                          ? 'border-current bg-current/10 ' + option.color
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}>
-                        <IconComponent className={`w-5 h-5 mx-auto mb-1 ${
-                          formData.role === option.value ? option.color : 'text-gray-400'
-                        }`} />
-                        <span className={`text-xs font-medium ${
-                          formData.role === option.value ? option.color : 'text-gray-600'
-                        }`}>
-                          {option.label}
-                        </span>
-                      </div>
-                    </label>
-                  )
-                })}
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                 Email address
               </label>
               <input
@@ -122,16 +68,16 @@ const Login = () => {
                 required
                 value={formData.email}
                 onChange={handleChange}
-                className="mt-1 block w-full px-3 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="input-field"
                 placeholder="Enter your email"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                 Password
               </label>
-              <div className="mt-1 relative">
+              <div className="relative">
                 <input
                   id="password"
                   name="password"
@@ -139,42 +85,59 @@ const Login = () => {
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  className="block w-full px-3 py-3 pr-10 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="input-field pr-12"
                   placeholder="Enter your password"
                 />
                 <button
                   type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-blue-600"
                 >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5 text-gray-400" />
+                  ) : (
+                    <Eye className="h-5 w-5 text-gray-400" />
+                  )}
                 </button>
               </div>
             </div>
-          </div>
 
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-xl text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            >
-              {loading ? <Loader size="sm" /> : 'Sign in'}
-            </button>
-          </div>
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                {error}
+              </div>
+            )}
 
-          <div className="text-center">
-            <p className="text-sm text-gray-600">
-              Don't have an account?{' '}
-              <Link 
-                to={`/register${formData.role !== 'user' ? `?role=${formData.role}` : ''}`} 
-                className="font-medium text-blue-600 hover:text-blue-500"
+            <div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-primary w-full py-3 text-lg"
               >
-                Register here
+                {loading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Signing in...
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center">
+                    <LogIn className="mr-2" size={20} />
+                    Sign in
+                  </div>
+                )}
+              </button>
+            </div>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-gray-600">
+              Don't have an account?{' '}
+              <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
+                Sign up for free
               </Link>
             </p>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   )

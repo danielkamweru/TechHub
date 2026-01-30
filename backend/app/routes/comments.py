@@ -43,6 +43,7 @@ def get_content_comments(
     content_id: int,
     db: Session = Depends(get_db)
 ):
+    from sqlalchemy.orm import joinedload
     content = db.query(Content).filter(Content.id == content_id).first()
     if not content:
         raise HTTPException(
@@ -50,7 +51,7 @@ def get_content_comments(
             detail="Content not found"
         )
     
-    comments = db.query(Comment).filter(Comment.content_id == content_id).all()
+    comments = db.query(Comment).options(joinedload(Comment.author)).filter(Comment.content_id == content_id).all()
     return build_comment_tree(comments)
 
 @router.post("/", response_model=CommentResponse)
@@ -94,6 +95,10 @@ def create_comment(
     db.commit()
     db.refresh(db_comment)
     
+    # Reload with relationships
+    from sqlalchemy.orm import joinedload
+    db_comment = db.query(Comment).options(joinedload(Comment.author)).filter(Comment.id == db_comment.id).first()
+    
     return db_comment
 
 @router.get("/{comment_id}", response_model=CommentResponse)
@@ -101,7 +106,8 @@ def get_comment(
     comment_id: int,
     db: Session = Depends(get_db)
 ):
-    comment = db.query(Comment).filter(Comment.id == comment_id).first()
+    from sqlalchemy.orm import joinedload
+    comment = db.query(Comment).options(joinedload(Comment.author)).filter(Comment.id == comment_id).first()
     if not comment:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -133,6 +139,12 @@ def update_comment(
     comment.content_text = content_text
     db.commit()
     db.refresh(comment)
+    
+    # Reload with relationships
+    from sqlalchemy.orm import joinedload
+    comment = db.query(Comment).options(
+        joinedload(Comment.author)
+    ).filter(Comment.id == comment_id).first()
     
     return comment
 

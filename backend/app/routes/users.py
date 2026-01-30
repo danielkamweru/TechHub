@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.database.connection import get_db
-from app.database.models import User, RoleEnum
+from app.database.models import User, Profile, RoleEnum
 from app.schemas.schemas import UserResponse, UserUpdate, UserCreate
 from app.core.dependencies import get_current_user, require_admin
 from app.core.auth import get_password_hash
@@ -16,7 +16,8 @@ def get_all_users(
     current_user: User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
-    users = db.query(User).offset(skip).limit(limit).all()
+    from sqlalchemy.orm import joinedload
+    users = db.query(User).options(joinedload(User.profile)).offset(skip).limit(limit).all()
     return users
 
 @router.get("/{user_id}", response_model=UserResponse)
@@ -25,7 +26,8 @@ def get_user(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    user = db.query(User).filter(User.id == user_id).first()
+    from sqlalchemy.orm import joinedload
+    user = db.query(User).options(joinedload(User.profile)).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -54,11 +56,30 @@ def update_user(
             detail="User not found"
         )
     
-    for field, value in user_update.dict(exclude_unset=True).items():
+    # Update user fields
+    update_data = user_update.dict(exclude_unset=True)
+    profile_fields = {'bio', 'avatar_url'}
+    user_fields = {k: v for k, v in update_data.items() if k not in profile_fields}
+    
+    for field, value in user_fields.items():
         setattr(user, field, value)
+    
+    # Update or create profile for bio and avatar_url
+    profile_fields_data = {k: v for k, v in update_data.items() if k in profile_fields}
+    if profile_fields_data:
+        profile = db.query(Profile).filter(Profile.user_id == user_id).first()
+        if profile:
+            for field, value in profile_fields_data.items():
+                setattr(profile, field, value)
+        else:
+            profile = Profile(user_id=user_id, **profile_fields_data)
+            db.add(profile)
     
     db.commit()
     db.refresh(user)
+    # Reload with profile
+    from sqlalchemy.orm import joinedload
+    user = db.query(User).options(joinedload(User.profile)).filter(User.id == user_id).first()
     return user
 
 @router.post("/", response_model=UserResponse)
@@ -86,14 +107,26 @@ def create_user(
         full_name=user.full_name,
         hashed_password=hashed_password,
         role=user.role,
-        bio=user.bio,
-        avatar_url=user.avatar_url
     )
     
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
     
+    # Create profile if bio or avatar_url provided
+    if user.bio or user.avatar_url:
+        profile = Profile(
+            user_id=db_user.id,
+            bio=user.bio,
+            avatar_url=user.avatar_url
+        )
+        db.add(profile)
+        db.commit()
+        db.refresh(profile)
+    
+    # Reload with profile
+    from sqlalchemy.orm import joinedload
+    db_user = db.query(User).options(joinedload(User.profile)).filter(User.id == db_user.id).first()
     return db_user
 
 @router.put("/{user_id}/deactivate")

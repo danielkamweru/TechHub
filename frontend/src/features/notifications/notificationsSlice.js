@@ -6,8 +6,13 @@ export const fetchNotifications = createAsyncThunk('notifications/fetchNotificat
   return response.data
 })
 
-export const markAsRead = createAsyncThunk('notifications/markAsRead', async (notificationId) => {
+export const markNotificationAsRead = createAsyncThunk('notifications/markNotificationAsRead', async (notificationId) => {
   const response = await api.put(`/notifications/${notificationId}/read`)
+  return response.data
+})
+
+export const markAllNotificationsAsRead = createAsyncThunk('notifications/markAllNotificationsAsRead', async () => {
+  const response = await api.put('/notifications/read-all')
   return response.data
 })
 
@@ -18,14 +23,20 @@ const notificationsSlice = createSlice({
     builder
       .addCase(fetchNotifications.fulfilled, (state, action) => {
         state.items = action.payload
-        state.unreadCount = action.payload.filter(n => !n.isRead).length
+        state.unreadCount = action.payload.filter(n => !n.is_read).length
       })
-      .addCase(markAsRead.fulfilled, (state, action) => {
+      .addCase(markNotificationAsRead.fulfilled, (state, action) => {
         const notification = state.items.find(n => n.id === action.payload.id)
-        if (notification && !notification.isRead) {
-          notification.isRead = true
+        if (notification && !notification.is_read) {
+          notification.is_read = true
           state.unreadCount -= 1
         }
+      })
+      .addCase(markAllNotificationsAsRead.fulfilled, (state) => {
+        state.items.forEach(notification => {
+          notification.is_read = true
+        })
+        state.unreadCount = 0
       })
   },
 })

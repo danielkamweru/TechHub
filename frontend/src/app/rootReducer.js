@@ -6,6 +6,7 @@ import commentsReducer from '../features/comments/commentsSlice'
 import categoriesReducer from '../features/categories/categoriesSlice'
 import wishlistReducer from '../features/wishlist/wishlistSlice'
 import notificationsReducer from '../features/notifications/notificationsSlice'
+import adminReducer from '../features/admin/adminSlice'
 
 const rootReducer = combineReducers({
   auth: authReducer,
@@ -15,6 +16,7 @@ const rootReducer = combineReducers({
   categories: categoriesReducer,
   wishlist: wishlistReducer,
   notifications: notificationsReducer,
+  admin: adminReducer,
 })
 
 export default rootReducer
