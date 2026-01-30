@@ -135,7 +135,7 @@ class Comment(Base):
     content_id = Column(Integer, ForeignKey("content.id"))
     author_id = Column(Integer, ForeignKey("users.id"))
     parent_id = Column(Integer, ForeignKey("comments.id"))  # For nested comments
-    content_text = Column(Text, nullable=False)
+    text = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     

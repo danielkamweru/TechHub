@@ -14,25 +14,9 @@ app = FastAPI(title="Moringa TechHub API", version="1.0.0")
 # Configure CORS middleware - MUST be added right after app creation
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:3001", 
-        "http://localhost:3003",
-        "http://localhost:3004",
-        "http://localhost:3005",
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:8000",
-        "http://localhost:8001",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:3005",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:5174",
-        "http://127.0.0.1:8000",
-        "http://127.0.0.1:8001",
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"]
 )

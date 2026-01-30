@@ -174,7 +174,7 @@ class ContentResponse(ContentBase):
 # =========================
 
 class CommentBase(BaseModel):
-    content_text: str
+    text: str
 
 
 class CommentCreate(CommentBase):

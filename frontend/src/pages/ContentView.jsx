@@ -8,6 +8,13 @@ import CommentThread from '../components/CommentThread'
 import CategoryTag from '../components/CategoryTag'
 import Loader from '../components/Loader'
 
+// Helper function to detect podcast websites
+const isPodcastWebsite = (url) => {
+  if (!url) return false
+  const podcastSites = ['changelog.com', 'syntax.fm', 'shoptalkshow.com', 'podcast.bretfisher.com']
+  return podcastSites.some(site => url.toLowerCase().includes(site))
+}
+
 const ContentView = () => {
   const { id } = useParams()
   const dispatch = useDispatch()
@@ -93,12 +100,30 @@ const ContentView = () => {
               </div>
             )}
             
-            {content.type === 'audio' && content.audioUrl && (
+            {content.type === 'audio' && content.audioUrl && !isPodcastWebsite(content.audioUrl) && (
               <div className="mb-6">
                 <audio controls className="w-full">
                   <source src={content.audioUrl} type="audio/mpeg" />
                   Your browser does not support the audio element.
                 </audio>
+              </div>
+            )}
+            
+            {content.type === 'audio' && content.audioUrl && isPodcastWebsite(content.audioUrl) && (
+              <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-blue-800 text-sm mb-3">
+                  <Headphones size={16} className="inline mr-2" />
+                  This podcast is hosted on an external website:
+                </p>
+                <a
+                  href={content.audioUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm"
+                >
+                  <Play size={14} />
+                  Listen on External Site
+                </a>
               </div>
             )}
             
