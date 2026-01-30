@@ -18,6 +18,7 @@ import UserDashboard from '../pages/User/UserDashboard'
 import Studio from '../pages/Studio'
 import CreateContent from '../pages/Content/CreateContent'
 import ContentDetail from '../pages/ContentDetail'
+import About from '../pages/About'
 import ApiTest from '../pages/ApiTest'
 
 const AppRoutes = () => {
@@ -26,6 +27,7 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/about" element={<About />} />
       <Route path="/explore" element={<ContentHub />} />
       <Route path="/test" element={<TestContent />} />
       <Route path="/api-test" element={<ApiTest />} />

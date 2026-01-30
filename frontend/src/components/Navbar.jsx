@@ -38,6 +38,9 @@ const Navbar = () => {
             <Link to="/explore" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
               Explore
             </Link>
+            <Link to="/about" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+              About
+            </Link>
             {isAuthenticated && (
               <>
                 <Link to="/wishlist" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
@@ -103,6 +106,9 @@ const Navbar = () => {
             </Link>
             <Link to="/explore" className="block px-3 py-2 text-gray-700 hover:bg-blue-50 rounded-xl font-medium transition-colors">
               Explore
+            </Link>
+            <Link to="/about" className="block px-3 py-2 text-gray-700 hover:bg-blue-50 rounded-xl font-medium transition-colors">
+              About
             </Link>
             {isAuthenticated ? (
               <>

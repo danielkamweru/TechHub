@@ -20,6 +20,7 @@ const ContentHub = () => {
   const { user, isAuthenticated } = useSelector((state) => state.auth)
   const { items: wishlistItems } = useSelector((state) => state.wishlist)
   
+  // Initialize state from URL params
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '')
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'all')
   const [selectedType, setSelectedType] = useState(searchParams.get('type') || 'all')
@@ -34,14 +35,24 @@ const ContentHub = () => {
     dispatch(fetchCategories())
   }, [dispatch])
 
-  // Update URL when filters change
+  // Watch for URL changes and update state
   useEffect(() => {
-    const params = new URLSearchParams()
-    if (searchTerm) params.set('search', searchTerm)
-    if (selectedCategory !== 'all') params.set('category', selectedCategory)
-    if (selectedType !== 'all') params.set('type', selectedType)
-    setSearchParams(params, { replace: true })
-  }, [searchTerm, selectedCategory, selectedType, setSearchParams])
+    const categoryFromUrl = searchParams.get('category')
+    const typeFromUrl = searchParams.get('type')
+    const searchFromUrl = searchParams.get('search')
+    
+    if (categoryFromUrl !== selectedCategory) {
+      setSelectedCategory(categoryFromUrl || 'all')
+    }
+    if (typeFromUrl !== selectedType) {
+      setSelectedType(typeFromUrl || 'all')
+    }
+    if (searchFromUrl !== searchTerm) {
+      setSearchTerm(searchFromUrl || '')
+    }
+  }, [searchParams.toString()])
+
+
 
   const handleLike = async (contentId, isLike = true) => {
     if (!isAuthenticated) {
@@ -171,6 +182,15 @@ const ContentHub = () => {
     
     const matchesType = selectedType === 'all' || 
       item.content_type === selectedType
+    
+    console.log('Filtering:', {
+      item: item.title,
+      category: item.category?.name,
+      selectedCategory,
+      matchesCategory,
+      selectedType,
+      matchesType
+    })
     
     return matchesSearch && matchesCategory && matchesType
   })

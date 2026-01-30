@@ -1,32 +1,9 @@
-import { useEffect, useState } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
+import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Search, Sparkles } from 'lucide-react'
-import ContentCard from '../components/ContentCard'
-import Loader from '../components/Loader'
-import { fetchContent, setFilters } from '../features/content/contentSlice'
-import { fetchCategories } from '../features/categories/categoriesSlice'
 
 const Home = () => {
-  const dispatch = useDispatch()
-  const { items: content, loading, filters, pagination } = useSelector((state) => state.content)
-  const { isAuthenticated } = useSelector((state) => state.auth)
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState(null)
-
-  useEffect(() => {
-    dispatch(fetchCategories())
-    dispatch(fetchContent({ limit: 50 }))
-  }, [dispatch])
-
-  useEffect(() => {
-    const delayedSearch = setTimeout(() => {
-      dispatch(setFilters({ search: searchTerm, category: selectedCategory }))
-      dispatch(fetchContent({ search: searchTerm, category: selectedCategory, limit: 50 }))
-    }, 500)
-
-    return () => clearTimeout(delayedSearch)
-  }, [searchTerm, selectedCategory, dispatch])
 
   return (
     <div className="min-h-screen">
@@ -71,20 +48,18 @@ const Home = () => {
           </div>
           
           {/* Create Account CTA */}
-          {!isAuthenticated && (
-            <div className="mb-8">
-              <Link 
-                to="/register" 
-                className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold text-lg rounded-2xl hover:from-yellow-500 hover:to-orange-600 transform hover:scale-105 transition-all duration-300 shadow-2xl hover:shadow-yellow-500/25"
-              >
-                <Sparkles className="mr-3" size={24} />
-                Create Your Free Account
-              </Link>
-              <p className="mt-4 text-white/80 text-sm">
-                Join thousands of tech enthusiasts sharing knowledge
-              </p>
-            </div>
-          )}
+          <div className="mb-8">
+            <Link 
+              to="/register" 
+              className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold text-lg rounded-2xl hover:from-yellow-500 hover:to-orange-600 transform hover:scale-105 transition-all duration-300 shadow-2xl hover:shadow-yellow-500/25"
+            >
+              <Sparkles className="mr-3" size={24} />
+              Create Your Free Account
+            </Link>
+            <p className="mt-4 text-white/80 text-sm">
+              Join thousands of tech enthusiasts sharing knowledge
+            </p>
+          </div>
           
           {/* Search Bar */}
           <div className="max-w-2xl mx-auto relative group">
@@ -103,9 +78,8 @@ const Home = () => {
         </div>
       </div>
 
-      {/* Full Stack Video Section + Content Grid */}
+      {/* Full Stack Video Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Full Stack Development Video */}
         <div className="mb-12">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">Full Stack Development Guide</h2>
@@ -132,54 +106,6 @@ const Home = () => {
             </div>
           </div>
         </div>
-
-        {/* Content Grid */}
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-4 text-gray-600 font-medium">Loading amazing content...</p>
-            </div>
-          </div>
-        ) : (
-          <>
-            {(content || []).length > 0 && (
-              <div className="mb-8">
-                <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
-                  <Sparkles className="text-blue-600" size={20} />
-                  Featured Content ({(content || []).length})
-                </h3>
-              </div>
-            )}
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-              {(content || []).map((item, index) => (
-                <div key={item.id} className="animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
-                  <ContentCard content={item} />
-                </div>
-              ))}
-            </div>
-
-            {/* Pagination */}
-            {(pagination && pagination.totalPages > 1) && (
-              <div className="flex justify-center gap-2">
-                {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(page => (
-                  <button
-                    key={page}
-                    onClick={() => dispatch(fetchContent({ ...filters, page }))}
-                    className={`px-4 py-2 rounded-xl font-medium transition-all hover:scale-105 ${
-                      page === pagination.page
-                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
-                        : 'bg-white/80 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-              </div>
-            )}
-          </>
-        )}
       </div>
     </div>
   )

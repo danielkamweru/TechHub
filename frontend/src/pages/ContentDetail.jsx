@@ -481,7 +481,7 @@ const ContentDetail = () => {
     try {
       const response = await api.post('/comments', {
         content_id: parseInt(id),
-        content_text: newComment,
+        text: newComment,
         parent_id: replyTo || null
       })
       setComments([...comments, response.data])

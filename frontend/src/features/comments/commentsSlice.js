@@ -27,9 +27,9 @@ export const addComment = createAsyncThunk(
 
 export const updateComment = createAsyncThunk(
   'comments/updateComment',
-  async ({ id, content_text }, { rejectWithValue }) => {
+  async ({ id, text }, { rejectWithValue }) => {
     try {
-      const response = await api.put(`/comments/${id}`, { content_text })
+      const response = await api.put(`/comments/${id}`, { text })
       return response.data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to update comment')

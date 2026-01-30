@@ -45,6 +45,28 @@ const ContentCard = ({ content, compact = false, onLike, onSaveToWishlist, showA
     }
   }
 
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: content.title,
+          text: content.description || `Check out this ${content.content_type} on TechHub`,
+          url: `${window.location.origin}/content/${content.id}`
+        })
+      } catch (error) {
+        console.log('Error sharing:', error)
+      }
+    } else {
+      // Fallback: Copy to clipboard
+      try {
+        await navigator.clipboard.writeText(`${window.location.origin}/content/${content.id}`)
+        alert('Link copied to clipboard!')
+      } catch (error) {
+        console.error('Failed to copy link:', error)
+      }
+    }
+  }
+
   const handleWishlist = () => {
     if (!user) return
     if (onSaveToWishlist) {
@@ -193,10 +215,18 @@ const ContentCard = ({ content, compact = false, onLike, onSaveToWishlist, showA
                 <Bookmark size={16} fill={isInWishlist ? 'currentColor' : 'none'} />
               </button>
               <button 
+                onClick={handleShare}
                 className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"
                 title="Share"
               >
                 <Share2 size={16} />
+              </button>
+              <button 
+                onClick={() => window.location.href = `/content/${content.id}#comments`}
+                className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"
+                title="Comments"
+              >
+                <MessageCircle size={16} />
               </button>
             </div>
           )}
