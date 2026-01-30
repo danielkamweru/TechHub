@@ -5,7 +5,7 @@ export const fetchWishlist = createAsyncThunk(
   'wishlist/fetchWishlist',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await api.get('/wishlist')
+      const response = await api.get('/wishlist/')
       return response.data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch wishlist')
@@ -17,7 +17,7 @@ export const fetchUserWishlist = createAsyncThunk(
   'wishlist/fetchUserWishlist',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await api.get('/wishlist/user')
+      const response = await api.get('/content/user/wishlist')
       return response.data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch user wishlist')
@@ -27,9 +27,11 @@ export const fetchUserWishlist = createAsyncThunk(
 
 export const addToWishlist = createAsyncThunk(
   'wishlist/addToWishlist',
-  async (contentId, { rejectWithValue }) => {
+  async (contentId, { rejectWithValue, dispatch }) => {
     try {
-      const response = await api.post('/wishlist', { content_id: contentId })
+      const response = await api.post(`/wishlist/${contentId}`)
+      // Refetch wishlist to get updated list
+      dispatch(fetchWishlist())
       return response.data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to add to wishlist')
@@ -39,9 +41,11 @@ export const addToWishlist = createAsyncThunk(
 
 export const removeFromWishlist = createAsyncThunk(
   'wishlist/removeFromWishlist',
-  async (contentId, { rejectWithValue }) => {
+  async (contentId, { rejectWithValue, dispatch }) => {
     try {
       await api.delete(`/wishlist/${contentId}`)
+      // Refetch wishlist to get updated list
+      dispatch(fetchWishlist())
       return contentId
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to remove from wishlist')
@@ -79,10 +83,10 @@ const wishlistSlice = createSlice({
         state.items = action.payload
       })
       .addCase(addToWishlist.fulfilled, (state, action) => {
-        state.items.push(action.payload)
+        state.error = null
       })
       .addCase(removeFromWishlist.fulfilled, (state, action) => {
-        state.items = state.items.filter(item => item.id !== action.payload)
+        state.error = null
       })
   },
 })

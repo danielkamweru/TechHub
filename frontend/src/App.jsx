@@ -6,6 +6,8 @@ import MobileNavigation from './components/MobileNavigation'
 import Footer from './components/Footer'
 import AppRoutes from './routes/AppRoutes'
 import { checkAuth } from './features/auth/authSlice'
+import { fetchUserLikes } from './features/content/contentSlice'
+import { fetchWishlist } from './features/wishlist/wishlistSlice'
 
 function App() {
   const dispatch = useDispatch()
@@ -18,6 +20,15 @@ function App() {
       dispatch(checkAuth())
     }
   }, [dispatch])
+
+  // Fetch user's likes and wishlist when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Fetch user data first, then content will have like status
+      dispatch(fetchUserLikes())
+      dispatch(fetchWishlist())
+    }
+  }, [isAuthenticated, dispatch])
 
   return (
     <BrowserRouter>

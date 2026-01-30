@@ -5,7 +5,7 @@ import {
   Play, Headphones, BookOpen, Heart, Bookmark, Share2, MessageCircle, 
   ArrowLeft, User, ThumbsDown, Eye, Calendar, Pause, SkipBack, SkipForward, Volume2
 } from 'lucide-react'
-import { fetchContentById, likeContent } from '../features/content/contentSlice'
+import { fetchContentById, likeContent, downvoteContent } from '../features/content/contentSlice'
 import { addToWishlist, removeFromWishlist } from '../features/wishlist/wishlistSlice'
 import CommentThread from '../components/CommentThread'
 import api from '../services/api'
@@ -444,15 +444,18 @@ const ContentDetail = () => {
   const { id } = useParams()
   const navigate = useNavigate()
   const dispatch = useDispatch()
-  const { currentContent, loading } = useSelector((state) => state.content)
+  const { currentContent, loading, userLikes } = useSelector((state) => state.content)
   const { isAuthenticated, user } = useSelector((state) => state.auth)
   const { items: wishlistItems } = useSelector((state) => state.wishlist)
   const [comments, setComments] = useState([])
   const [newComment, setNewComment] = useState('')
   const [replyTo, setReplyTo] = useState(null)
-  const [isLiked, setIsLiked] = useState(false)
-  const [isDisliked, setIsDisliked] = useState(false)
-  const [isInWishlist, setIsInWishlist] = useState(false)
+
+  // Get like/dislike status from persisted userLikes
+  const userLike = userLikes.find(like => like.content_id === parseInt(id))
+  const isLiked = userLike?.is_like || false
+  const isDisliked = userLike?.is_like === false || false
+  const isInWishlist = wishlistItems.some(item => item.id === parseInt(id))
 
   useEffect(() => {
     if (id) {
@@ -460,12 +463,6 @@ const ContentDetail = () => {
       fetchComments()
     }
   }, [dispatch, id])
-
-  useEffect(() => {
-    if (currentContent) {
-      setIsInWishlist(wishlistItems.some(item => item.id === currentContent.id))
-    }
-  }, [currentContent, wishlistItems])
 
   const fetchComments = async () => {
     try {
@@ -503,8 +500,6 @@ const ContentDetail = () => {
     
     try {
       await dispatch(likeContent({ contentId: parseInt(id), isLike })).unwrap()
-      setIsLiked(isLike)
-      setIsDisliked(!isLike)
     } catch (error) {
       console.error('Failed to like/dislike:', error)
     }

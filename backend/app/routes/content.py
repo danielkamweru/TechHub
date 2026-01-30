@@ -126,6 +126,52 @@ def create_content(
     
     return db_content
 
+# User-specific routes (must come before parameterized routes)
+@router.get("/user/wishlist", response_model=List[ContentResponse])
+def get_user_wishlist(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return current_user.wishlist
+
+@router.get("/user/likes")
+def get_user_likes(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get user's likes and dislikes"""
+    try:
+        likes = db.query(Like).filter(Like.user_id == current_user.id).all()
+        return [
+            {
+                "content_id": like.content_id,
+                "is_like": like.is_like,
+                "created_at": like.created_at
+            }
+            for like in likes
+        ]
+    except Exception as e:
+        return []
+
+@router.get("/my-likes")
+def get_my_likes(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Alternative endpoint for user likes"""
+    try:
+        likes = db.query(Like).filter(Like.user_id == current_user.id).all()
+        return [
+            {
+                "content_id": like.content_id,
+                "is_like": like.is_like,
+                "created_at": like.created_at
+            }
+            for like in likes
+        ]
+    except Exception as e:
+        return []
+
 @router.get("/{content_id}", response_model=ContentResponse)
 def get_content_by_id(
     content_id: int,
@@ -364,10 +410,3 @@ def remove_from_wishlist(
         return {"message": "Content removed from wishlist"}
     
     return {"message": "Content not in wishlist"}
-
-@router.get("/user/wishlist", response_model=List[ContentResponse])
-def get_user_wishlist(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    return current_user.wishlist

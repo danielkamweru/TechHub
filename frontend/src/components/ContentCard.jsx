@@ -1,18 +1,23 @@
 import { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
-import { Heart, MessageCircle, Share2, Bookmark, Play, FileText, Headphones, Eye } from 'lucide-react'
+import { Heart, MessageCircle, Share2, Bookmark, Play, FileText, Headphones, Eye, ThumbsDown } from 'lucide-react'
+import { likeContent, downvoteContent } from '../features/content/contentSlice'
 import { addToWishlist, removeFromWishlist } from '../features/wishlist/wishlistSlice'
-import { likeContent } from '../features/content/contentSlice'
 import CategoryTag from './CategoryTag'
 
 const ContentCard = ({ content, compact = false, onLike, onSaveToWishlist, showActions = true }) => {
   const dispatch = useDispatch()
   const { user } = useSelector((state) => state.auth)
   const { items: wishlistItems } = useSelector((state) => state.wishlist)
+  const { userLikes } = useSelector((state) => state.content)
   
-  const [isLiked, setIsLiked] = useState(content.isLiked)
-  const [likesCount, setLikesCount] = useState(content.likes_count || 0)
+  // Get like/dislike status from persisted userLikes
+  const userLike = userLikes.find(like => like.content_id === content.id)
+  const isLiked = userLike?.is_like || false
+  const isDisliked = userLike?.is_like === false || false
+  const likesCount = content.likes_count || 0
+  const dislikesCount = content.dislikes_count || 0
   
   const isInWishlist = wishlistItems.some(item => item.id === content.id)
 
@@ -24,11 +29,19 @@ const ContentCard = ({ content, compact = false, onLike, onSaveToWishlist, showA
         onLike(content.id)
       } else {
         await dispatch(likeContent({ contentId: content.id, isLike: true })).unwrap()
-        setIsLiked(!isLiked)
-        setLikesCount(prev => isLiked ? prev - 1 : prev + 1)
       }
     } catch (error) {
       console.error('Failed to like content:', error)
+    }
+  }
+
+  const handleDownvote = async () => {
+    if (!user) return
+    
+    try {
+      await dispatch(downvoteContent({ contentId: content.id, isDislike: true })).unwrap()
+    } catch (error) {
+      console.error('Failed to downvote content:', error)
     }
   }
 
@@ -135,6 +148,10 @@ const ContentCard = ({ content, compact = false, onLike, onSaveToWishlist, showA
               {likesCount}
             </span>
             <span className="flex items-center gap-1">
+              <ThumbsDown size={14} />
+              {dislikesCount}
+            </span>
+            <span className="flex items-center gap-1">
               <MessageCircle size={14} />
               {content.comments_count || 0}
             </span>
@@ -149,8 +166,20 @@ const ContentCard = ({ content, compact = false, onLike, onSaveToWishlist, showA
                     ? 'text-red-600 bg-red-50'
                     : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
                 }`}
+                title={isLiked ? 'Unlike' : 'Like'}
               >
                 <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
+              </button>
+              <button
+                onClick={handleDownvote}
+                className={`p-2 rounded-lg transition-colors ${
+                  isDisliked
+                    ? 'text-gray-600 bg-gray-100'
+                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                }`}
+                title={isDisliked ? 'Remove downvote' : 'Downvote'}
+              >
+                <ThumbsDown size={16} fill={isDisliked ? 'currentColor' : 'none'} />
               </button>
               <button
                 onClick={handleWishlist}
@@ -159,10 +188,14 @@ const ContentCard = ({ content, compact = false, onLike, onSaveToWishlist, showA
                     ? 'text-blue-600 bg-blue-50'
                     : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
                 }`}
+                title={isInWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
               >
                 <Bookmark size={16} fill={isInWishlist ? 'currentColor' : 'none'} />
               </button>
-              <button className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors">
+              <button 
+                className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"
+                title="Share"
+              >
                 <Share2 size={16} />
               </button>
             </div>
