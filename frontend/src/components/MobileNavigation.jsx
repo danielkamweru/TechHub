@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useSelector } from 'react-redux'
-import { Link, useLocation } from 'react-router-dom'
+import { useSelector, useDispatch } from 'react-redux'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { 
   Menu, 
   X, 
@@ -17,8 +17,11 @@ import {
   Plus
 } from 'lucide-react'
 import NotificationCenter from './NotificationCenter'
+import { logout } from '../features/auth/authSlice'
 
 const MobileNavigation = () => {
+  const dispatch = useDispatch()
+  const navigate = useNavigate()
   const { user, isAuthenticated } = useSelector((state) => state.auth)
   const location = useLocation()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -33,6 +36,21 @@ const MobileNavigation = () => {
   }, [])
 
   const closeMenu = () => setIsMenuOpen(false)
+
+  const handleLogout = async () => {
+    try {
+      await dispatch(logout()).unwrap()
+      closeMenu()
+      navigate('/')
+    } catch (error) {
+      console.error('Logout failed:', error)
+    }
+  }
+
+  const handleSettings = () => {
+    closeMenu()
+    navigate('/settings')
+  }
 
   const getNavItems = () => {
     const items = [
@@ -99,8 +117,19 @@ const MobileNavigation = () => {
             {/* Menu Header */}
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                  <User className="w-5 h-5 text-gray-600" />
+                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
+                  {user?.avatar_url ? (
+                    <img 
+                      src={user.avatar_url} 
+                      alt="Avatar" 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.style.display = 'none'
+                        e.target.nextSibling.style.display = 'flex'
+                      }}
+                    />
+                  ) : null}
+                  <User className="w-5 h-5 text-gray-600" style={{ display: user?.avatar_url ? 'none' : 'block' }} />
                 </div>
                 <div>
                   <p className="font-medium text-gray-900">{user?.full_name || user?.username}</p>
@@ -153,12 +182,10 @@ const MobileNavigation = () => {
                   </Link>
                 )}
                 
-                <button className="flex items-center gap-3 px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg w-full">
-                  <Settings className="w-5 h-5" />
-                  <span className="font-medium">Settings</span>
-                </button>
-                
-                <button className="flex items-center gap-3 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg w-full">
+                <button 
+                  onClick={handleLogout}
+                  className="flex items-center gap-3 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg w-full text-left"
+                >
                   <LogOut className="w-5 h-5" />
                   <span className="font-medium">Logout</span>
                 </button>
@@ -169,7 +196,7 @@ const MobileNavigation = () => {
             <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
               <div className="text-center text-sm text-gray-500">
                 <p>TechHub Learning Platform</p>
-                <p className="mt-1">© 2024 All rights reserved</p>
+                <p className="mt-1">© 2026 All rights reserved</p>
               </div>
             </div>
           </div>

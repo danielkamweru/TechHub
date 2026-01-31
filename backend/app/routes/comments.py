@@ -95,6 +95,32 @@ def create_comment(
     db.commit()
     db.refresh(db_comment)
     
+    # Create notification for content author (if not commenting on own content)
+    if content.author_id != current_user.id:
+        from app.database.models import Notification, NotificationTypeEnum
+        notification = Notification(
+            user_id=content.author_id,
+            notification_type=NotificationTypeEnum.COMMENT,
+            title="New comment on your content",
+            message=f"{current_user.full_name or current_user.username} commented on \"{content.title}\"",
+            related_content_id=content.id
+        )
+        db.add(notification)
+    
+    # If replying to a comment, notify the parent comment author
+    if comment.parent_id and parent_comment.author_id != current_user.id and parent_comment.author_id != content.author_id:
+        from app.database.models import Notification, NotificationTypeEnum
+        notification = Notification(
+            user_id=parent_comment.author_id,
+            notification_type=NotificationTypeEnum.COMMENT,
+            title="Reply to your comment",
+            message=f"{current_user.full_name or current_user.username} replied to your comment",
+            related_content_id=content.id
+        )
+        db.add(notification)
+    
+    db.commit()
+    
     # Reload with relationships
     from sqlalchemy.orm import joinedload
     db_comment = db.query(Comment).options(joinedload(Comment.author)).filter(Comment.id == db_comment.id).first()

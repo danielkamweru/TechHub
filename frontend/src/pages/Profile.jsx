@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
-import { User, Mail, Edit2, Save, X, Github, Linkedin, Twitter, Camera, Settings, Bell, BookOpen, Heart } from 'lucide-react'
+import { User, Mail, Edit2, Save, X, Github, Linkedin, Camera, Settings, Bell, BookOpen, Heart, Upload } from 'lucide-react'
 import { updateUserProfile } from '../features/auth/authSlice'
 import { fetchUserContent } from '../features/content/contentSlice'
 import { fetchUserWishlist } from '../features/wishlist/wishlistSlice'
+import api from '../services/api'
 
 const Profile = () => {
   const dispatch = useDispatch()
@@ -13,13 +14,13 @@ const Profile = () => {
   
   const [isEditing, setIsEditing] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
+  const [uploading, setUploading] = useState(false)
   const [formData, setFormData] = useState({
     full_name: '',
     bio: '',
     avatar_url: '',
     github_url: '',
     linkedin_url: '',
-    twitter_url: '',
     interests: []
   })
 
@@ -31,11 +32,14 @@ const Profile = () => {
         avatar_url: user.avatar_url || '',
         github_url: user.github_url || '',
         linkedin_url: user.linkedin_url || '',
-        twitter_url: user.twitter_url || '',
         interests: user.interests || []
       })
       dispatch(fetchUserContent(user.id))
-      dispatch(fetchUserWishlist())
+      // Only fetch wishlist if user is authenticated and has a valid token
+      const token = localStorage.getItem('token')
+      if (token) {
+        dispatch(fetchUserWishlist())
+      }
     }
   }, [user, dispatch])
 
@@ -48,6 +52,52 @@ const Profile = () => {
     }
   }
 
+  const handleImageUpload = async (event) => {
+    const file = event.target.files[0]
+    if (!file) return
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file')
+      return
+    }
+    
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image size should be less than 5MB')
+      return
+    }
+    
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      
+      console.log('Uploading image...')
+      const response = await api.post('/auth/upload-avatar', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+      
+      console.log('Upload response:', response.data)
+      
+      // Update the form data with new avatar URL
+      setFormData(prev => ({ ...prev, avatar_url: response.data.avatar_url }))
+      
+      // Update the user in Redux store
+      dispatch({ type: 'auth/updateUserProfile/fulfilled', payload: response.data.user })
+      
+      console.log('Avatar URL updated to:', response.data.avatar_url)
+      
+    } catch (error) {
+      console.error('Failed to upload image:', error)
+      alert('Failed to upload image. Please try again.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const handleCancel = () => {
     setIsEditing(false)
     if (user) {
@@ -57,7 +107,6 @@ const Profile = () => {
         avatar_url: user.avatar_url || '',
         github_url: user.github_url || '',
         linkedin_url: user.linkedin_url || '',
-        twitter_url: user.twitter_url || '',
         interests: user.interests || []
       })
     }
@@ -80,15 +129,35 @@ const Profile = () => {
               <div className="relative">
                 <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center">
                   {formData.avatar_url ? (
-                    <img src={formData.avatar_url} alt="Avatar" className="w-full h-full rounded-full object-cover" />
+                    <img src={formData.avatar_url} alt="Avatar" className="w-full h-full rounded-full object-cover" onError={(e) => {
+                      console.error('Avatar image failed to load:', formData.avatar_url);
+                      e.target.style.display = 'none';
+                    }} />
                   ) : (
                     <User size={40} className="text-gray-400" />
                   )}
                 </div>
                 {isEditing && (
-                  <button className="absolute bottom-0 right-0 bg-blue-600 text-white p-1 rounded-full">
-                    <Camera size={14} />
-                  </button>
+                  <div className="relative">
+                    <input
+                      type="file"
+                      id="avatar-upload"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      disabled={uploading}
+                    />
+                    <label
+                      htmlFor="avatar-upload"
+                      className="absolute bottom-0 right-0 bg-blue-600 text-white p-1 rounded-full cursor-pointer hover:bg-blue-700 transition-colors"
+                    >
+                      {uploading ? (
+                        <div className="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-full" />
+                      ) : (
+                        <Upload size={14} />
+                      )}
+                    </label>
+                  </div>
                 )}
               </div>
               <div>
@@ -144,11 +213,6 @@ const Profile = () => {
                 <Linkedin size={20} />
               </a>
             )}
-            {formData.twitter_url && (
-              <a href={formData.twitter_url} target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-blue-400">
-                <Twitter size={20} />
-              </a>
-            )}
           </div>
 
           {/* Save/Cancel Buttons */}
@@ -156,7 +220,7 @@ const Profile = () => {
             <div className="mt-6 flex gap-2">
               <button
                 onClick={handleSaveProfile}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 <Save size={18} />
                 Save Changes
@@ -187,14 +251,36 @@ const Profile = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Avatar URL</label>
-                <input
-                  type="url"
-                  value={formData.avatar_url}
-                  onChange={(e) => setFormData({...formData, avatar_url: e.target.value})}
-                  className="w-full p-2 border rounded-lg"
-                  placeholder="https://example.com/avatar.jpg"
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Profile Image</label>
+                <div className="flex items-center gap-4">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    id="profile-image-upload"
+                    disabled={uploading}
+                  />
+                  <label
+                    htmlFor="profile-image-upload"
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer transition-colors"
+                  >
+                    {uploading ? (
+                      <>
+                        <div className="animate-spin w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full" />
+                        <span>Uploading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={18} />
+                        <span>Upload Image</span>
+                      </>
+                    )}
+                  </label>
+                  {formData.avatar_url && (
+                    <span className="text-sm text-green-600">Image uploaded</span>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">GitHub URL</label>
@@ -214,16 +300,6 @@ const Profile = () => {
                   onChange={(e) => setFormData({...formData, linkedin_url: e.target.value})}
                   className="w-full p-2 border rounded-lg"
                   placeholder="https://linkedin.com/in/username"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Twitter URL</label>
-                <input
-                  type="url"
-                  value={formData.twitter_url}
-                  onChange={(e) => setFormData({...formData, twitter_url: e.target.value})}
-                  className="w-full p-2 border rounded-lg"
-                  placeholder="https://twitter.com/username"
                 />
               </div>
             </div>

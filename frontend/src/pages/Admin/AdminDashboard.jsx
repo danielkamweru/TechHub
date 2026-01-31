@@ -24,7 +24,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     dispatch(fetchUsers())
-    dispatch(fetchContent())
+    dispatch(fetchContent({ limit: 100, status: null })) // Fetch all content for admin
     dispatch(fetchCategories())
   }, [dispatch])
 
@@ -87,7 +87,7 @@ const AdminDashboard = () => {
           await dispatch(removeContent(contentId)).unwrap()
           break
       }
-      dispatch(fetchContent())
+      dispatch(fetchContent({ limit: 100, status: null })) // Refresh all content
     } catch (error) {
       console.error(`Failed to ${action} content:`, error)
     }
@@ -301,67 +301,107 @@ const AdminDashboard = () => {
             {activeTab === 'content' && (
               <div>
                 <h2 className="text-xl font-semibold mb-4">Content Management</h2>
-                <div className="space-y-4">
-                  {(content || []).map((item) => (
-                    <div key={item.id} className="border rounded-lg p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-medium text-gray-900">{item.title}</h3>
-                          <p className="text-gray-600 text-sm mt-1">{item.content_text?.substring(0, 150)}...</p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 capitalize">
-                              {item.content_type}
-                            </span>
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              item.status === 'published' ? 'bg-green-100 text-green-800' :
-                              item.status === 'review' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-gray-100 text-gray-800'
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Author</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {[...(content || [])]
+                        .sort((a, b) => {
+                          // Published content first, then unpublished at bottom
+                          if (a.status === 'PUBLISHED' && b.status !== 'PUBLISHED') return -1
+                          if (a.status !== 'PUBLISHED' && b.status === 'PUBLISHED') return 1
+                          return a.id - b.id
+                        })
+                        .map((item) => (
+                        <tr key={item.id}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {item.title}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {item.author?.full_name || item.author?.username}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">
+                            {item.content_type}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              item.status === 'PUBLISHED' ? 'bg-green-100 text-green-800' :
+                              item.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-800' :
+                              item.status === 'REVIEW' ? 'bg-blue-100 text-blue-800' :
+                              'bg-red-100 text-red-800'
                             }`}>
-                              {item.status || 'draft'}
+                              {item.status}
                             </span>
-                            <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
-                              {item.category?.name}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              By: {item.author?.full_name}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
-                            <span>{item.views_count || 0} views</span>
-                            <span>{item.likes_count || 0} likes</span>
-                            <span>{item.comments_count || 0} comments</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 ml-4">
-                          {item.status === 'review' && (
-                            <>
-                              <button
-                                onClick={() => handleContentAction(item.id, 'approve')}
-                                className="flex items-center gap-1 px-3 py-1 text-green-600 hover:bg-green-50 rounded-md text-sm"
-                              >
-                                <CheckCircle size={14} />
-                                Approve
-                              </button>
-                              <button
-                                onClick={() => handleContentAction(item.id, 'reject')}
-                                className="flex items-center gap-1 px-3 py-1 text-red-600 hover:bg-red-50 rounded-md text-sm"
-                              >
-                                <XCircle size={14} />
-                                Reject
-                              </button>
-                            </>
-                          )}
-                          <button
-                            onClick={() => handleContentAction(item.id, 'delete')}
-                            className="flex items-center gap-1 px-3 py-1 text-red-600 hover:bg-red-50 rounded-md text-sm"
-                          >
-                            <Trash2 size={14} />
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <div className="flex items-center gap-1">
+                              {item.status === 'PUBLISHED' ? (
+                                // Published content shows flag and delete
+                                <>
+                                  <button
+                                    className={`p-2 rounded hover:bg-orange-50 border border-orange-300 ${
+                                      item.is_flagged ? 'text-white bg-red-600 hover:bg-red-700' : 'text-orange-600 hover:text-orange-900 bg-orange-50'
+                                    }`}
+                                    title="Flag"
+                                  >
+                                    <Flag size={14} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleContentAction(item.id, 'delete')}
+                                    className="text-red-600 hover:text-red-900 p-2 rounded hover:bg-red-50 border border-red-300 bg-red-50"
+                                    title="Delete"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </>
+                              ) : (
+                                // Unpublished content shows approve, reject, flag, delete
+                                <>
+                                  <button
+                                    onClick={() => handleContentAction(item.id, 'approve')}
+                                    className="text-green-600 hover:text-green-900 p-2 rounded hover:bg-green-50 border border-green-300 bg-green-50"
+                                    title="Approve"
+                                  >
+                                    <CheckCircle size={14} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleContentAction(item.id, 'reject')}
+                                    className="text-red-600 hover:text-red-900 p-2 rounded hover:bg-red-50 border border-red-300 bg-red-50"
+                                    title="Reject"
+                                  >
+                                    <XCircle size={14} />
+                                  </button>
+                                  <button
+                                    className={`p-2 rounded hover:bg-orange-50 border border-orange-300 ${
+                                      item.is_flagged ? 'text-white bg-red-600 hover:bg-red-700' : 'text-orange-600 hover:text-orange-900 bg-orange-50'
+                                    }`}
+                                    title="Flag"
+                                  >
+                                    <Flag size={14} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleContentAction(item.id, 'delete')}
+                                    className="text-red-600 hover:text-red-900 p-2 rounded hover:bg-red-50 border border-red-300 bg-red-50"
+                                    title="Delete"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}

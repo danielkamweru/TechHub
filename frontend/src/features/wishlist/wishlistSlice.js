@@ -18,9 +18,11 @@ export const fetchUserWishlist = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await api.get('/content/user/wishlist')
-      return response.data
+      return response.data || []
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch user wishlist')
+      // Return empty array instead of rejecting to prevent UI errors
+      console.warn('Wishlist fetch failed:', error.response?.data?.message || error.message)
+      return []
     }
   }
 )

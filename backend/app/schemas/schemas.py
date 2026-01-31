@@ -62,14 +62,27 @@ class UserResponse(UserBase):
                 if not hasattr(data, 'bio') or data.bio is None:
                     data.bio = data.profile.bio if data.profile.bio else None
                 if not hasattr(data, 'avatar_url') or data.avatar_url is None:
-                    data.avatar_url = data.profile.avatar_url if data.profile.avatar_url else None
+                    avatar_url = data.profile.avatar_url if data.profile.avatar_url else None
+                    # Convert relative URL to full URL
+                    if avatar_url and avatar_url.startswith('/'):
+                        avatar_url = f"http://localhost:8000{avatar_url}"
+                    data.avatar_url = avatar_url
             elif isinstance(data, dict):
                 # Handle dict input (from manual construction)
                 if 'profile' in data and data['profile']:
                     if 'bio' not in data or data['bio'] is None:
                         data['bio'] = data['profile'].bio if hasattr(data['profile'], 'bio') and data['profile'].bio else None
                     if 'avatar_url' not in data or data['avatar_url'] is None:
-                        data['avatar_url'] = data['profile'].avatar_url if hasattr(data['profile'], 'avatar_url') and data['profile'].avatar_url else None
+                        avatar_url = data['profile'].avatar_url if hasattr(data['profile'], 'avatar_url') and data['profile'].avatar_url else None
+                        # Convert relative URL to full URL
+                        if avatar_url and avatar_url.startswith('/'):
+                            avatar_url = f"http://localhost:8000{avatar_url}"
+                        data['avatar_url'] = avatar_url
+                # Also handle direct avatar_url field
+                elif 'avatar_url' in data and data['avatar_url']:
+                    avatar_url = data['avatar_url']
+                    if avatar_url.startswith('/'):
+                        data['avatar_url'] = f"http://localhost:8000{avatar_url}"
         except Exception:
             # If profile extraction fails, just use None values
             pass

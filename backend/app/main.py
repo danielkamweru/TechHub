@@ -1,9 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from app.database.connection import engine
 from app.database.models import Base
 from app.routes import auth, users, content, comments, categories, notifications, wishlist, admin_enhanced
 import logging
+import os
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -38,6 +40,15 @@ app.include_router(comments.router, prefix="/api/comments", tags=["Comments"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
 app.include_router(wishlist.router, prefix="/api/wishlist", tags=["Wishlist"])
 app.include_router(admin_enhanced.router, prefix="/api/admin", tags=["Admin"])
+
+# Serve static files (uploaded images)
+uploads_path = os.path.join(os.path.dirname(__file__), "..", "uploads")
+if os.path.exists(uploads_path):
+    app.mount("/uploads", StaticFiles(directory=uploads_path), name="uploads")
+    # Also serve avatars directly
+    avatars_path = os.path.join(uploads_path, "avatars")
+    if os.path.exists(avatars_path):
+        app.mount("/avatars", StaticFiles(directory=avatars_path), name="avatars")
 
 @app.get("/")
 async def root():

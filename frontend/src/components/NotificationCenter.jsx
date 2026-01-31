@@ -2,13 +2,22 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { Bell, X, Info, AlertTriangle, CheckCircle, MessageSquare, Heart, User, Settings, FileText } from 'lucide-react'
-import { fetchNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '../features/notifications/notificationsSlice'
+import { fetchNotifications, markNotificationAsRead, markAllNotificationsAsRead, fetchUnreadCount } from '../features/notifications/notificationsSlice'
 
 const NotificationCenter = () => {
   const dispatch = useDispatch()
   const { items: notifications, unreadCount } = useSelector((state) => state.notifications)
   const [isOpen, setIsOpen] = useState(false)
   const [filter, setFilter] = useState('all')
+
+  // Fetch unread count on mount and periodically
+  useEffect(() => {
+    dispatch(fetchUnreadCount())
+    const interval = setInterval(() => {
+      dispatch(fetchUnreadCount())
+    }, 30000) // Check every 30 seconds
+    return () => clearInterval(interval)
+  }, [dispatch])
 
   useEffect(() => {
     if (isOpen) {

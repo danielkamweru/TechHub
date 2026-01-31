@@ -3,10 +3,11 @@ import api from '../../services/api'
 
 export const fetchContent = createAsyncThunk(
   'content/fetchContent',
-  async ({ page = 1, category = null, search = '', limit = 50 } = {}) => {
+  async ({ page = 1, category = null, search = '', limit = 50, status = null } = {}) => {
     const params = new URLSearchParams({ page, limit: limit.toString() })
     if (category) params.append('category', category)
     if (search) params.append('search', search)
+    if (status !== null) params.append('status', status)
     
     const response = await api.get(`/content?${params}`)
     return response.data
@@ -113,8 +114,8 @@ export const removeContent = createAsyncThunk(
 
 export const flagContent = createAsyncThunk(
   'content/flagContent',
-  async ({ contentId, reason }) => {
-    const response = await api.post(`/content/${contentId}/flag`, { reason })
+  async ({ contentId, reason, description = '' }) => {
+    const response = await api.post(`/content/${contentId}/flag`, { reason, description })
     return response.data
   }
 )
@@ -219,53 +220,73 @@ const contentSlice = createSlice({
         state.items = state.items.filter(item => item.id !== action.payload)
       })
       .addCase(likeContent.fulfilled, (state, action) => {
-        const { contentId } = action.payload
-        const isLike = true
+        const { contentId, likes_count, dislikes_count } = action.payload
+        
+        // Update user likes tracking
         const existing = state.userLikes.find(l => l.content_id === contentId)
         if (existing) {
-          existing.is_like = isLike
+          // Toggle like if same action, otherwise update
+          if (existing.is_like === true) {
+            // Remove like (toggle off)
+            state.userLikes = state.userLikes.filter(l => l.content_id !== contentId)
+          } else {
+            existing.is_like = true
+          }
         } else {
-          state.userLikes.push({ content_id: contentId, is_like: isLike })
+          state.userLikes.push({ content_id: contentId, is_like: true })
         }
+        
+        // Update content items with server counts
         const item = state.items.find(i => i.id === contentId)
         if (item) {
-          const wasDisliked = item.isDisliked
-          item.isLiked = true
-          item.isDisliked = false
-          item.likes_count = (item.likes_count || 0) + 1
-          if (wasDisliked) item.dislikes_count = Math.max(0, (item.dislikes_count || 0) - 1)
+          const userLike = state.userLikes.find(l => l.content_id === contentId)
+          item.isLiked = userLike?.is_like === true || false
+          item.isDisliked = userLike?.is_like === false || false
+          item.likes_count = likes_count
+          item.dislikes_count = dislikes_count
         }
+        
         if (state.currentContent?.id === contentId) {
-          const wasDisliked = state.currentContent.isDisliked
-          state.currentContent.isLiked = true
-          state.currentContent.isDisliked = false
-          state.currentContent.likes_count = (state.currentContent.likes_count || 0) + 1
-          if (wasDisliked) state.currentContent.dislikes_count = Math.max(0, (state.currentContent.dislikes_count || 0) - 1)
+          const userLike = state.userLikes.find(l => l.content_id === contentId)
+          state.currentContent.isLiked = userLike?.is_like === true || false
+          state.currentContent.isDisliked = userLike?.is_like === false || false
+          state.currentContent.likes_count = likes_count
+          state.currentContent.dislikes_count = dislikes_count
         }
       })
       .addCase(downvoteContent.fulfilled, (state, action) => {
-        const { contentId } = action.payload
-        const isLike = false
+        const { contentId, likes_count, dislikes_count } = action.payload
+        
+        // Update user likes tracking
         const existing = state.userLikes.find(l => l.content_id === contentId)
         if (existing) {
-          existing.is_like = isLike
+          // Toggle dislike if same action, otherwise update
+          if (existing.is_like === false) {
+            // Remove dislike (toggle off)
+            state.userLikes = state.userLikes.filter(l => l.content_id !== contentId)
+          } else {
+            existing.is_like = false
+          }
         } else {
-          state.userLikes.push({ content_id: contentId, is_like: isLike })
+          state.userLikes.push({ content_id: contentId, is_like: false })
         }
+        
+        // Update content items with server counts
         const item = state.items.find(i => i.id === contentId)
         if (item) {
-          const wasLiked = item.isLiked
-          item.isDisliked = true
-          item.isLiked = false
-          item.dislikes_count = (item.dislikes_count || 0) + 1
-          if (wasLiked) item.likes_count = Math.max(0, (item.likes_count || 0) - 1)
+          const userLike = state.userLikes.find(l => l.content_id === contentId)
+          item.isLiked = userLike?.is_like === true || false
+          item.isDisliked = userLike?.is_like === false || false
+          item.likes_count = likes_count
+          item.dislikes_count = dislikes_count
         }
+        
         if (state.currentContent?.id === contentId) {
-          const wasLiked = state.currentContent.isLiked
-          state.currentContent.isDisliked = true
-          state.currentContent.isLiked = false
-          state.currentContent.dislikes_count = (state.currentContent.dislikes_count || 0) + 1
-          if (wasLiked) state.currentContent.likes_count = Math.max(0, (state.currentContent.likes_count || 0) - 1)
+          const userLike = state.userLikes.find(l => l.content_id === contentId)
+          state.currentContent.isLiked = userLike?.is_like === true || false
+          state.currentContent.isDisliked = userLike?.is_like === false || false
+          state.currentContent.likes_count = likes_count
+          state.currentContent.dislikes_count = dislikes_count
         }
       })
       .addCase(fetchUserLikes.fulfilled, (state, action) => {

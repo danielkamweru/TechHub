@@ -16,7 +16,8 @@ def get_content(
     page: int = 1,
     limit: int = 20,
     category_id: Optional[int] = None,
-    status: Optional[ContentStatusEnum] = ContentStatusEnum.PUBLISHED,
+    status: Optional[ContentStatusEnum] = None,  # Remove default filter for admin
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     try:
@@ -26,8 +27,13 @@ def get_content(
         if category_id:
             query = query.filter(Content.category_id == category_id)
         
-        if status:
+        # Only filter by status if specified AND user is not admin
+        if status and current_user.role != RoleEnum.ADMIN:
             query = query.filter(Content.status == status)
+        elif not current_user or current_user.role != RoleEnum.ADMIN:
+            # Non-admin users only see published content by default
+            query = query.filter(Content.status == ContentStatusEnum.PUBLISHED)
+        # Admin sees ALL content regardless of status
         
         # Get content with relationships loaded
         content_list = query.options(
@@ -64,6 +70,7 @@ def get_content(
                     "likes_count": likes_count,
                     "dislikes_count": dislikes_count,
                     "comments_count": comments_count,
+                    "is_flagged": getattr(content, 'is_flagged', False),
                     "author": {
                         "id": content.author.id if content.author else None,
                         "username": content.author.username if content.author else "Unknown",
@@ -131,12 +138,159 @@ def create_content(
     return db_content
 
 # User-specific routes (must come before parameterized routes)
+@router.get("/user/{user_id}", response_model=List[ContentResponse])
+def get_user_content(
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get content created by a specific user"""
+    try:
+        # Get content by user_id
+        content_list = db.query(Content).filter(Content.author_id == user_id).options(
+            joinedload(Content.author),
+            joinedload(Content.category)
+        ).all()
+        
+        # Add counts and format response
+        result = []
+        for content in content_list:
+            try:
+                likes_count = db.query(Like).filter(Like.content_id == content.id, Like.is_like == True).count()
+                dislikes_count = db.query(Like).filter(Like.content_id == content.id, Like.is_like == False).count()
+                comments_count = db.query(ContentComment).filter(ContentComment.content_id == content.id).count()
+                
+                content_dict = {
+                    "id": content.id,
+                    "title": content.title,
+                    "content_text": content.content_text,
+                    "content_type": content.content_type,
+                    "media_url": content.media_url,
+                    "thumbnail_url": content.thumbnail_url,
+                    "tags": content.tags,
+                    "status": content.status,
+                    "views_count": content.views_count,
+                    "created_at": content.created_at,
+                    "updated_at": content.updated_at,
+                    "published_at": content.published_at,
+                    "author_id": content.author_id,
+                    "category_id": content.category_id,
+                    "author": {
+                        "id": content.author.id,
+                        "username": content.author.username,
+                        "email": content.author.email,
+                        "full_name": content.author.full_name,
+                        "role": content.author.role.value,
+                        "is_active": content.author.is_active,
+                        "created_at": content.author.created_at,
+                        "bio": content.author.bio if hasattr(content.author, 'bio') else None,
+                        "avatar_url": content.author.avatar_url if hasattr(content.author, 'avatar_url') else None
+                    },
+                    "category": {
+                        "id": content.category.id,
+                        "name": content.category.name,
+                        "description": content.category.description,
+                        "color": content.category.color,
+                        "created_at": content.category.created_at,
+                        "created_by": content.category.created_by
+                    },
+                    "likes_count": likes_count,
+                    "dislikes_count": dislikes_count,
+                    "comments_count": comments_count,
+                    "is_flagged": getattr(content, 'is_flagged', False)
+                }
+                result.append(content_dict)
+            except Exception as e:
+                print(f"Error processing content {content.id}: {e}")
+                continue
+        
+        return result
+    except Exception as e:
+        print(f"Error fetching user content: {e}")
+        return []
+
 @router.get("/user/wishlist", response_model=List[ContentResponse])
 def get_user_wishlist(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    return current_user.wishlist
+    """Get user's wishlist with full content details"""
+    try:
+        # Get user's wishlist items using the association table
+        from app.database.models import user_wishlist
+        wishlist_content_ids = db.query(user_wishlist.c.content_id).filter(
+            user_wishlist.c.user_id == current_user.id
+        ).all()
+        
+        if not wishlist_content_ids:
+            return []
+        
+        content_ids = [item[0] for item in wishlist_content_ids]
+        
+        wishlist_items = db.query(Content).filter(
+            Content.id.in_(content_ids)
+        ).options(
+            joinedload(Content.author),
+            joinedload(Content.category)
+        ).all()
+        
+        # Format response with counts
+        result = []
+        for content in wishlist_items:
+            try:
+                likes_count = db.query(Like).filter(Like.content_id == content.id, Like.is_like == True).count()
+                dislikes_count = db.query(Like).filter(Like.content_id == content.id, Like.is_like == False).count()
+                comments_count = db.query(ContentComment).filter(ContentComment.content_id == content.id).count()
+                
+                content_dict = {
+                    "id": content.id,
+                    "title": content.title,
+                    "content_text": content.content_text,
+                    "content_type": content.content_type.value if content.content_type else "article",
+                    "status": content.status.value if content.status else "published",
+                    "media_url": content.media_url,
+                    "thumbnail_url": content.thumbnail_url,
+                    "tags": content.tags,
+                    "views_count": content.views_count or 0,
+                    "created_at": content.created_at.isoformat() if content.created_at else None,
+                    "updated_at": content.updated_at.isoformat() if content.updated_at else None,
+                    "published_at": content.published_at.isoformat() if content.published_at else None,
+                    "author_id": content.author_id,
+                    "category_id": content.category_id,
+                    "author": {
+                        "id": content.author.id if content.author else None,
+                        "username": content.author.username if content.author else "Unknown",
+                        "email": content.author.email if content.author else "",
+                        "full_name": content.author.full_name if content.author else "Unknown",
+                        "role": content.author.role.value if content.author and content.author.role else "user",
+                        "is_active": content.author.is_active if content.author else True,
+                        "created_at": content.author.created_at.isoformat() if content.author and content.author.created_at else None,
+                        "bio": content.author.bio if hasattr(content.author, 'bio') else None,
+                        "avatar_url": content.author.avatar_url if hasattr(content.author, 'avatar_url') else None
+                    },
+                    "category": {
+                        "id": content.category.id if content.category else None,
+                        "name": content.category.name if content.category else "Uncategorized",
+                        "description": content.category.description if content.category else "",
+                        "color": content.category.color if content.category else "#3B82F6",
+                        "created_at": content.category.created_at.isoformat() if content.category and content.category.created_at else None,
+                        "created_by": content.category.created_by if content.category else None
+                    },
+                    "likes_count": likes_count,
+                    "dislikes_count": dislikes_count,
+                    "comments_count": comments_count,
+                    "is_flagged": getattr(content, 'is_flagged', False)
+                }
+                result.append(content_dict)
+            except Exception as e:
+                print(f"Error processing wishlist content {content.id}: {e}")
+                continue
+        
+        return result
+    except Exception as e:
+        print(f"Error fetching user wishlist: {e}")
+        # Return empty array instead of raising exception
+        return []
 
 @router.get("/user/likes")
 def get_user_likes(
@@ -375,9 +529,18 @@ def like_content(
         Like.content_id == content_id
     ).first()
     
+    should_notify = False
+    
     if existing_like:
-        # Update existing like/dislike
-        existing_like.is_like = like_data.is_like
+        # If same action, remove the like/dislike (toggle off)
+        if existing_like.is_like == like_data.is_like:
+            db.delete(existing_like)
+            action = "removed like" if like_data.is_like else "removed dislike"
+        else:
+            # Update to opposite action
+            existing_like.is_like = like_data.is_like
+            action = "liked" if like_data.is_like else "disliked"
+            should_notify = like_data.is_like  # Only notify for likes, not dislikes
     else:
         # Create new like/dislike
         new_like = Like(
@@ -386,11 +549,32 @@ def like_content(
             is_like=like_data.is_like
         )
         db.add(new_like)
+        action = "liked" if like_data.is_like else "disliked"
+        should_notify = like_data.is_like  # Only notify for likes, not dislikes
     
     db.commit()
     
-    action = "liked" if like_data.is_like else "disliked"
-    return {"message": f"Content {action} successfully"}
+    # Create notification for content author (only for likes, not dislikes, and not own content)
+    if should_notify and content.author_id != current_user.id:
+        notification = Notification(
+            user_id=content.author_id,
+            notification_type=NotificationTypeEnum.LIKE,
+            title="Someone liked your content",
+            message=f"{current_user.full_name or current_user.username} liked \"{content.title}\"",
+            related_content_id=content.id
+        )
+        db.add(notification)
+        db.commit()
+    
+    # Return updated counts
+    likes_count = db.query(Like).filter(Like.content_id == content_id, Like.is_like == True).count()
+    dislikes_count = db.query(Like).filter(Like.content_id == content_id, Like.is_like == False).count()
+    
+    return {
+        "message": f"Content {action} successfully",
+        "likes_count": likes_count,
+        "dislikes_count": dislikes_count
+    }
 
 @router.post("/{content_id}/wishlist")
 def add_to_wishlist(
@@ -405,12 +589,22 @@ def add_to_wishlist(
             detail="Content not found"
         )
     
-    if content not in current_user.wishlist:
-        current_user.wishlist.append(content)
-        db.commit()
-        return {"message": "Content added to wishlist"}
+    # Check if already in wishlist using association table
+    from app.database.models import user_wishlist
+    existing = db.query(user_wishlist).filter(
+        user_wishlist.c.user_id == current_user.id,
+        user_wishlist.c.content_id == content_id
+    ).first()
     
-    return {"message": "Content already in wishlist"}
+    if existing:
+        return {"message": "Content already in wishlist"}
+    
+    # Add to wishlist
+    stmt = user_wishlist.insert().values(user_id=current_user.id, content_id=content_id)
+    db.execute(stmt)
+    db.commit()
+    
+    return {"message": "Content added to wishlist"}
 
 @router.delete("/{content_id}/wishlist")
 def remove_from_wishlist(
@@ -425,9 +619,36 @@ def remove_from_wishlist(
             detail="Content not found"
         )
     
-    if content in current_user.wishlist:
-        current_user.wishlist.remove(content)
-        db.commit()
-        return {"message": "Content removed from wishlist"}
+    # Remove from wishlist using association table
+    from app.database.models import user_wishlist
+    stmt = user_wishlist.delete().where(
+        user_wishlist.c.user_id == current_user.id,
+        user_wishlist.c.content_id == content_id
+    )
+    result = db.execute(stmt)
+    db.commit()
     
-    return {"message": "Content not in wishlist"}
+    if result.rowcount == 0:
+        return {"message": "Content not in wishlist"}
+    
+    return {"message": "Content removed from wishlist"}
+
+@router.post("/{content_id}/flag")
+def flag_content(
+    content_id: int,
+    flag_data: dict,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    content = db.query(Content).filter(Content.id == content_id).first()
+    if not content:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Content not found"
+        )
+    
+    # Set is_flagged to True
+    content.is_flagged = True
+    db.commit()
+    
+    return {"message": "Content flagged successfully"}

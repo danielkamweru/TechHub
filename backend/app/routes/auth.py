@@ -1,12 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Body
+from fastapi import APIRouter, Depends, HTTPException, status, Body, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+import os
+import uuid
+from typing import Optional
 
 from app.database.connection import get_db
 from app.database.models import User, RoleEnum
 from app.schemas.schemas import (
     UserCreate,
     UserResponse,
+    UserUpdate,
     LoginRequest,
     Token,
 )
@@ -226,3 +230,117 @@ def get_me(current_user: User = Depends(get_current_user), db: Session = Depends
     from sqlalchemy.orm import joinedload
     user = db.query(User).options(joinedload(User.profile)).filter(User.id == current_user.id).first()
     return user
+
+
+@router.put("/profile", response_model=UserResponse)
+def update_profile(
+    user_update: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    from app.database.models import Profile
+    from sqlalchemy.orm import joinedload
+    
+    user = db.query(User).filter(User.id == current_user.id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Update user fields
+    update_data = user_update.dict(exclude_unset=True)
+    profile_fields = {'bio', 'avatar_url'}
+    user_fields = {k: v for k, v in update_data.items() if k not in profile_fields}
+    
+    for field, value in user_fields.items():
+        setattr(user, field, value)
+    
+    # Update or create profile for bio and avatar_url
+    profile_fields_data = {k: v for k, v in update_data.items() if k in profile_fields}
+    if profile_fields_data:
+        profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
+        if profile:
+            for field, value in profile_fields_data.items():
+                setattr(profile, field, value)
+        else:
+            profile = Profile(user_id=current_user.id, **profile_fields_data)
+            db.add(profile)
+    
+    db.commit()
+    db.refresh(user)
+    
+    # Reload with profile
+    user = db.query(User).options(joinedload(User.profile)).filter(User.id == current_user.id).first()
+    return user
+
+
+@router.post("/upload-avatar")
+async def upload_avatar(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    from app.database.models import Profile
+    from sqlalchemy.orm import joinedload
+    
+    # Validate file type
+    if not file.content_type.startswith('image/'):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File must be an image"
+        )
+    
+    # Create uploads directory if it doesn't exist
+    uploads_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "uploads", "avatars"))
+    os.makedirs(uploads_dir, exist_ok=True)
+    
+    # Generate unique filename
+    file_extension = file.filename.split('.')[-1] if '.' in file.filename else 'jpg'
+    unique_filename = f"{uuid.uuid4()}.{file_extension}"
+    file_path = os.path.join(uploads_dir, unique_filename)
+    
+    # Save file
+    try:
+        print(f"Saving file to: {file_path}")
+        with open(file_path, "wb") as buffer:
+            content = await file.read()
+            buffer.write(content)
+        print(f"File saved successfully. Size: {len(content)} bytes")
+    except Exception as e:
+        print(f"Error saving file: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to save file: {str(e)}"
+        )
+    
+    # Update user's avatar_url in profile
+    avatar_url = f"/uploads/avatars/{unique_filename}"
+    
+    # Verify file exists
+    if not os.path.exists(file_path):
+        print(f"ERROR: File was not saved at {file_path}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="File was not saved successfully"
+        )
+    
+    print(f"File verified at: {file_path}")
+    print(f"Avatar URL: {avatar_url}")
+    
+    profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
+    if profile:
+        profile.avatar_url = avatar_url
+    else:
+        profile = Profile(user_id=current_user.id, avatar_url=avatar_url)
+        db.add(profile)
+    
+    db.commit()
+    
+    # Return updated user with profile
+    user = db.query(User).options(joinedload(User.profile)).filter(User.id == current_user.id).first()
+    
+    # Return full URL for frontend
+    full_avatar_url = f"http://localhost:8000{avatar_url}" if avatar_url else None
+    
+    return {"avatar_url": full_avatar_url, "user": user}

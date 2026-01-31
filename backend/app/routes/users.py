@@ -185,3 +185,12 @@ def activate_user(
     db.commit()
     
     return {"message": "User activated successfully"}
+
+@router.get("/{user_id}/recommendations")
+def get_user_recommendations(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get content recommendations for a user"""
+    return {"recommendations": []}
