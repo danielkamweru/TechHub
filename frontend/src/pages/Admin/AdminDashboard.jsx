@@ -316,8 +316,8 @@ const AdminDashboard = () => {
                       {[...(content || [])]
                         .sort((a, b) => {
                           // Published content first, then unpublished at bottom
-                          if (a.status === 'PUBLISHED' && b.status !== 'PUBLISHED') return -1
-                          if (a.status !== 'PUBLISHED' && b.status === 'PUBLISHED') return 1
+                          if (a.status === 'published' && b.status !== 'published') return -1
+                          if (a.status !== 'published' && b.status === 'published') return 1
                           return a.id - b.id
                         })
                         .map((item) => (
@@ -333,33 +333,38 @@ const AdminDashboard = () => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              item.status === 'PUBLISHED' ? 'bg-green-100 text-green-800' :
-                              item.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-800' :
-                              item.status === 'REVIEW' ? 'bg-blue-100 text-blue-800' :
-                              'bg-red-100 text-red-800'
+                              item.status === 'published' ? 'bg-green-100 text-green-800' :
+                              item.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
+                              item.status === 'review' ? 'bg-blue-100 text-blue-800' :
+                              'bg-gray-100 text-gray-800'
                             }`}>
-                              {item.status}
+                              {item.status === 'published' ? 'PUBLISHED' : 
+                               item.status === 'draft' ? 'DRAFT' : 
+                               item.status === 'review' ? 'REVIEW' : 
+                               'UNPUBLISHED'}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div className="flex items-center gap-1">
-                              {item.status === 'PUBLISHED' ? (
+                              {item.status === 'published' ? (
                                 // Published content shows flag and delete
                                 <>
                                   <button
-                                    className={`p-2 rounded hover:bg-orange-50 border border-orange-300 ${
+                                    className={`flex items-center gap-1 px-3 py-2 rounded hover:bg-orange-50 border border-orange-300 ${
                                       item.is_flagged ? 'text-white bg-red-600 hover:bg-red-700' : 'text-orange-600 hover:text-orange-900 bg-orange-50'
                                     }`}
                                     title="Flag"
                                   >
                                     <Flag size={14} />
+                                    <span className="text-xs font-medium">Flag</span>
                                   </button>
                                   <button
                                     onClick={() => handleContentAction(item.id, 'delete')}
-                                    className="text-red-600 hover:text-red-900 p-2 rounded hover:bg-red-50 border border-red-300 bg-red-50"
+                                    className="flex items-center gap-1 px-3 py-2 text-red-600 hover:text-red-900 rounded hover:bg-red-50 border border-red-300 bg-red-50"
                                     title="Delete"
                                   >
                                     <Trash2 size={14} />
+                                    <span className="text-xs font-medium">Delete</span>
                                   </button>
                                 </>
                               ) : (
@@ -367,32 +372,36 @@ const AdminDashboard = () => {
                                 <>
                                   <button
                                     onClick={() => handleContentAction(item.id, 'approve')}
-                                    className="text-green-600 hover:text-green-900 p-2 rounded hover:bg-green-50 border border-green-300 bg-green-50"
+                                    className="flex items-center gap-1 px-3 py-2 text-green-600 hover:text-green-900 rounded hover:bg-green-50 border border-green-300 bg-green-50"
                                     title="Approve"
                                   >
                                     <CheckCircle size={14} />
+                                    <span className="text-xs font-medium">Approve</span>
                                   </button>
                                   <button
                                     onClick={() => handleContentAction(item.id, 'reject')}
-                                    className="text-red-600 hover:text-red-900 p-2 rounded hover:bg-red-50 border border-red-300 bg-red-50"
+                                    className="flex items-center gap-1 px-3 py-2 text-red-600 hover:text-red-900 rounded hover:bg-red-50 border border-red-300 bg-red-50"
                                     title="Reject"
                                   >
                                     <XCircle size={14} />
+                                    <span className="text-xs font-medium">Reject</span>
                                   </button>
                                   <button
-                                    className={`p-2 rounded hover:bg-orange-50 border border-orange-300 ${
+                                    className={`flex items-center gap-1 px-3 py-2 rounded hover:bg-orange-50 border border-orange-300 ${
                                       item.is_flagged ? 'text-white bg-red-600 hover:bg-red-700' : 'text-orange-600 hover:text-orange-900 bg-orange-50'
                                     }`}
                                     title="Flag"
                                   >
                                     <Flag size={14} />
+                                    <span className="text-xs font-medium">Flag</span>
                                   </button>
                                   <button
                                     onClick={() => handleContentAction(item.id, 'delete')}
-                                    className="text-red-600 hover:text-red-900 p-2 rounded hover:bg-red-50 border border-red-300 bg-red-50"
+                                    className="flex items-center gap-1 px-3 py-2 text-red-600 hover:text-red-900 rounded hover:bg-red-50 border border-red-300 bg-red-50"
                                     title="Delete"
                                   >
                                     <Trash2 size={14} />
+                                    <span className="text-xs font-medium">Delete</span>
                                   </button>
                                 </>
                               )}
