@@ -33,7 +33,11 @@ def get_content(
         elif not current_user or current_user.role != RoleEnum.ADMIN:
             # Non-admin users only see published content by default
             query = query.filter(Content.status == ContentStatusEnum.PUBLISHED)
-        # Admin sees ALL content regardless of status
+        
+        # Filter out flagged content for non-admin users
+        if current_user.role != RoleEnum.ADMIN:
+            query = query.filter(Content.is_flagged == False)
+        # Admin sees ALL content regardless of status or flag
         
         # Get content with relationships loaded
         content_list = query.options(
@@ -70,7 +74,7 @@ def get_content(
                     "likes_count": likes_count,
                     "dislikes_count": dislikes_count,
                     "comments_count": comments_count,
-                    "is_flagged": getattr(content, 'is_flagged', False),
+                    "is_flagged": content.is_flagged if hasattr(content, 'is_flagged') else False,
                     "author": {
                         "id": content.author.id if content.author else None,
                         "username": content.author.username if content.author else "Unknown",
@@ -377,6 +381,7 @@ def get_content_by_id(
         "likes_count": likes_count,
         "dislikes_count": dislikes_count,
         "comments_count": comments_count,
+        "is_flagged": getattr(content, 'is_flagged', False),
         "author": {
             "id": content.author.id if content.author else None,
             "username": content.author.username if content.author else "Unknown",
@@ -636,7 +641,25 @@ def remove_from_wishlist(
 @router.post("/{content_id}/flag")
 def flag_content(
     content_id: int,
-    flag_data: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    content = db.query(Content).filter(Content.id == content_id).first()
+    if not content:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Content not found"
+        )
+    
+    # Toggle flag status
+    content.is_flagged = not content.is_flagged
+    db.commit()
+    
+    return {"message": f"Content {'flagged' if content.is_flagged else 'unflagged'} successfully"}
+
+@router.post("/{content_id}/unflag")
+def unflag_content(
+    content_id: int,
     current_user: User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
@@ -647,8 +670,7 @@ def flag_content(
             detail="Content not found"
         )
     
-    # Set is_flagged to True
-    content.is_flagged = True
+    content.is_flagged = False
     db.commit()
     
-    return {"message": "Content flagged successfully"}
+    return {"message": "Content unflagged successfully"}

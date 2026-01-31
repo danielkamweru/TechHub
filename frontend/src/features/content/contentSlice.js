@@ -9,7 +9,8 @@ export const fetchContent = createAsyncThunk(
     if (search) params.append('search', search)
     if (status !== null) params.append('status', status)
     
-    const response = await api.get(`/content?${params}`)
+    const response = await api.get(`/content/?${params}`)
+    console.log('Raw API response:', response.data)
     return response.data
   }
 )
@@ -114,8 +115,16 @@ export const removeContent = createAsyncThunk(
 
 export const flagContent = createAsyncThunk(
   'content/flagContent',
-  async ({ contentId, reason, description = '' }) => {
-    const response = await api.post(`/content/${contentId}/flag`, { reason, description })
+  async (contentId) => {
+    const response = await api.post(`/content/${contentId}/flag`)
+    return { contentId, ...response.data }
+  }
+)
+
+export const unflagContent = createAsyncThunk(
+  'content/unflagContent',
+  async (contentId) => {
+    const response = await api.post(`/content/${contentId}/unflag`)
     return response.data
   }
 )
@@ -168,7 +177,8 @@ const contentSlice = createSlice({
             return {
               ...item,
               isLiked: userLike?.is_like || false,
-              isDisliked: userLike?.is_like === false || false
+              isDisliked: userLike?.is_like === false || false,
+              is_flagged: item.is_flagged || false
             }
           })
           state.pagination = {
@@ -182,7 +192,8 @@ const contentSlice = createSlice({
             return {
               ...item,
               isLiked: userLike?.is_like || false,
-              isDisliked: userLike?.is_like === false || false
+              isDisliked: userLike?.is_like === false || false,
+              is_flagged: item.is_flagged || false
             }
           })
           state.pagination = action.payload.pagination || {
@@ -308,6 +319,28 @@ const contentSlice = createSlice({
             isLiked: currentUserLike?.is_like || false,
             isDisliked: currentUserLike?.is_like === false || false
           }
+        }
+      })
+      .addCase(flagContent.fulfilled, (state, action) => {
+        // Update the content item to show it's flagged/unflagged
+        const contentId = action.payload.contentId
+        const item = state.items.find(i => i.id === contentId)
+        if (item) {
+          item.is_flagged = !item.is_flagged
+        }
+        if (state.currentContent?.id === contentId) {
+          state.currentContent.is_flagged = !state.currentContent.is_flagged
+        }
+      })
+      .addCase(unflagContent.fulfilled, (state, action) => {
+        // Update the content item to show it's unflagged
+        const contentId = parseInt(action.meta.arg)
+        const item = state.items.find(i => i.id === contentId)
+        if (item) {
+          item.is_flagged = false
+        }
+        if (state.currentContent?.id === contentId) {
+          state.currentContent.is_flagged = false
         }
       })
   },

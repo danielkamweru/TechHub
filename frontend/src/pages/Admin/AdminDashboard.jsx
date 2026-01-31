@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
+import toast from 'react-hot-toast'
 import { Users, FileText, Folder, Shield, Eye, EyeOff, Trash2, CheckCircle, XCircle, AlertTriangle, TrendingUp, BarChart3, Settings, Plus, Edit, Flag } from 'lucide-react'
 import { fetchUsers, createUser, deactivateUser, activateUser, updateUserRole } from '../../features/users/usersSlice'
-import { fetchContent, approveContent, rejectContent, removeContent } from '../../features/content/contentSlice'
+import { fetchContent, approveContent, rejectContent, removeContent, flagContent, unflagContent } from '../../features/content/contentSlice'
 import { fetchCategories, createCategory, updateCategory, deleteCategory } from '../../features/categories/categoriesSlice'
 
 const AdminDashboard = () => {
@@ -10,7 +11,11 @@ const AdminDashboard = () => {
   const { items: users } = useSelector((state) => state.users)
   const { items: content } = useSelector((state) => state.content)
   const { items: categories } = useSelector((state) => state.categories)
-  const [activeTab, setActiveTab] = useState('overview')
+  const [activeTab, setActiveTab] = useState(() => {
+    // Get the active tab from localStorage or default to 'overview'
+    const savedTab = localStorage.getItem('adminActiveTab')
+    return savedTab || 'overview'
+  })
   const [showCreateUser, setShowCreateUser] = useState(false)
   const [showCreateCategory, setShowCreateCategory] = useState(false)
   const [newUser, setNewUser] = useState({
@@ -22,9 +27,18 @@ const AdminDashboard = () => {
   })
   const [newCategory, setNewCategory] = useState({ name: '', description: '', color: '#3B82F6' })
 
+  // Save active tab to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('adminActiveTab', activeTab)
+  }, [activeTab])
+
   useEffect(() => {
     dispatch(fetchUsers())
-    dispatch(fetchContent({ limit: 100, status: null })) // Fetch all content for admin
+    dispatch(fetchContent({ limit: 100, status: null })).then((action) => {
+      console.log('Content received:', action.payload?.length || 0, 'items')
+      console.log('Flagged items:', action.payload?.filter(item => item.is_flagged) || [])
+      console.log('Sample item:', action.payload?.[0])
+    })
     dispatch(fetchCategories())
   }, [dispatch])
 
@@ -79,17 +93,29 @@ const AdminDashboard = () => {
       switch (action) {
         case 'approve':
           await dispatch(approveContent(contentId)).unwrap()
+          toast.success('Content approved successfully!')
           break
         case 'reject':
           await dispatch(rejectContent(contentId)).unwrap()
+          toast.success('Content rejected successfully!')
           break
         case 'delete':
           await dispatch(removeContent(contentId)).unwrap()
+          toast.success('Content deleted successfully!')
+          break
+        case 'flag':
+          await dispatch(flagContent(contentId)).unwrap()
+          toast.success('Content flagged successfully!')
+          break
+        case 'unflag':
+          await dispatch(flagContent(contentId)).unwrap()
+          toast.success('Content returned successfully!')
           break
       }
       dispatch(fetchContent({ limit: 100, status: null })) // Refresh all content
     } catch (error) {
       console.error(`Failed to ${action} content:`, error)
+      toast.error(`Failed to ${action} content. Please try again.`)
     }
   }
 
@@ -350,13 +376,14 @@ const AdminDashboard = () => {
                                 // Published content shows flag and delete
                                 <>
                                   <button
+                                    onClick={() => handleContentAction(item.id, item.is_flagged ? 'unflag' : 'flag')}
                                     className={`flex items-center gap-1 px-3 py-2 rounded hover:bg-orange-50 border border-orange-300 ${
                                       item.is_flagged ? 'text-white bg-red-600 hover:bg-red-700' : 'text-orange-600 hover:text-orange-900 bg-orange-50'
                                     }`}
-                                    title="Flag"
+                                    title={item.is_flagged ? "Unflag" : "Flag"}
                                   >
                                     <Flag size={14} />
-                                    <span className="text-xs font-medium">Flag</span>
+                                    <span className="text-xs font-medium">{item.is_flagged ? 'Unflag' : 'Flag'}</span>
                                   </button>
                                   <button
                                     onClick={() => handleContentAction(item.id, 'delete')}
@@ -387,13 +414,14 @@ const AdminDashboard = () => {
                                     <span className="text-xs font-medium">Reject</span>
                                   </button>
                                   <button
+                                    onClick={() => handleContentAction(item.id, item.is_flagged ? 'unflag' : 'flag')}
                                     className={`flex items-center gap-1 px-3 py-2 rounded hover:bg-orange-50 border border-orange-300 ${
                                       item.is_flagged ? 'text-white bg-red-600 hover:bg-red-700' : 'text-orange-600 hover:text-orange-900 bg-orange-50'
                                     }`}
-                                    title="Flag"
+                                    title={item.is_flagged ? "Unflag" : "Flag"}
                                   >
                                     <Flag size={14} />
-                                    <span className="text-xs font-medium">Flag</span>
+                                    <span className="text-xs font-medium">{item.is_flagged ? 'Unflag' : 'Flag'}</span>
                                   </button>
                                   <button
                                     onClick={() => handleContentAction(item.id, 'delete')}
@@ -463,14 +491,78 @@ const AdminDashboard = () => {
             {activeTab === 'flags' && (
               <div>
                 <h2 className="text-xl font-semibold mb-4">Content Flags</h2>
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle className="text-yellow-600" size={20} />
-                    <h3 className="font-medium text-yellow-800">No Active Flags</h3>
-                  </div>
-                  <p className="text-yellow-700 text-sm">
-                    Content flagging system will be available once backend implementation is complete.
+                <div className="mb-4">
+                  <p className="text-sm text-gray-600">
+                    Total content items: {content?.length || 0} | 
+                    Flagged items: {content?.filter(item => item.is_flagged).length || 0}
                   </p>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Author</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {content?.filter(item => item.is_flagged).map((item) => (
+                        <tr key={item.id}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {item.title}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {item.author?.full_name || item.author?.username}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              item.status === 'published' ? 'bg-green-100 text-green-800' :
+                              item.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
+                              item.status === 'review' ? 'bg-blue-100 text-blue-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {item.status === 'published' ? 'PUBLISHED' : 
+                               item.status === 'draft' ? 'DRAFT' : 
+                               item.status === 'review' ? 'REVIEW' : 
+                               'UNPUBLISHED'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleContentAction(item.id, 'unflag')}
+                                className="flex items-center gap-1 px-3 py-2 text-green-600 hover:text-green-900 rounded hover:bg-green-50 border border-green-300 bg-green-50"
+                                title="Return Content"
+                              >
+                                <CheckCircle size={14} />
+                                <span className="text-xs font-medium">Return</span>
+                              </button>
+                              <button
+                                onClick={() => handleContentAction(item.id, 'delete')}
+                                className="flex items-center gap-1 px-3 py-2 text-red-600 hover:text-red-900 rounded hover:bg-red-50 border border-red-300 bg-red-50"
+                                title="Delete"
+                              >
+                                <Trash2 size={14} />
+                                <span className="text-xs font-medium">Delete</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {(!content?.filter(item => item.is_flagged).length) && (
+                        <tr>
+                          <td colSpan="4" className="px-6 py-12 text-center">
+                            <div className="flex flex-col items-center">
+                              <AlertTriangle className="text-gray-400 mb-2" size={32} />
+                              <p className="text-gray-500 text-sm">No flagged content found</p>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}

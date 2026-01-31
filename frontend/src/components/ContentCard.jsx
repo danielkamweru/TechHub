@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
-import { Heart, MessageCircle, Share2, Bookmark, Play, FileText, Headphones, Eye, ThumbsDown } from 'lucide-react'
-import { likeContent, downvoteContent } from '../features/content/contentSlice'
+import { Heart, MessageCircle, Share2, Bookmark, Play, FileText, Headphones, Eye, ThumbsDown, Flag } from 'lucide-react'
+import { likeContent, downvoteContent, flagContent } from '../features/content/contentSlice'
 import { addToWishlist, removeFromWishlist } from '../features/wishlist/wishlistSlice'
 import CategoryTag from './CategoryTag'
 
@@ -77,6 +77,16 @@ const ContentCard = ({ content, compact = false, onLike, onSaveToWishlist, showA
       } else {
         dispatch(addToWishlist(content.id))
       }
+    }
+  }
+
+  const handleFlag = async () => {
+    if (!user) return
+    
+    try {
+      await dispatch(flagContent(content.id)).unwrap()
+    } catch (error) {
+      console.error('Failed to flag content:', error)
     }
   }
 
@@ -227,6 +237,17 @@ const ContentCard = ({ content, compact = false, onLike, onSaveToWishlist, showA
                 title="Comments"
               >
                 <MessageCircle size={16} />
+              </button>
+              <button 
+                onClick={handleFlag}
+                className={`p-2 rounded-lg transition-colors ${
+                  content.is_flagged
+                    ? 'text-red-600 bg-red-50'
+                    : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
+                }`}
+                title={content.is_flagged ? 'Unflag' : 'Flag'}
+              >
+                <Flag size={16} fill={content.is_flagged ? 'currentColor' : 'none'} />
               </button>
             </div>
           )}

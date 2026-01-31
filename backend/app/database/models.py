@@ -118,6 +118,7 @@ class Content(Base):
     likes_count = Column(Integer, default=0)
     dislikes_count = Column(Integer, default=0)
     views_count = Column(Integer, default=0)
+    is_flagged = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     published_at = Column(DateTime(timezone=True))

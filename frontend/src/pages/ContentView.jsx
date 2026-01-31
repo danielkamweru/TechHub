@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
-import { Play, FileText, Headphones, Calendar, User } from 'lucide-react'
+import { Play, FileText, Headphones, Calendar, User, AlertTriangle } from 'lucide-react'
 import { fetchContentById } from '../features/content/contentSlice'
 import { fetchComments } from '../features/comments/commentsSlice'
 import CommentThread from '../components/CommentThread'
@@ -17,8 +17,10 @@ const isPodcastWebsite = (url) => {
 
 const ContentView = () => {
   const { id } = useParams()
+  const navigate = useNavigate()
   const dispatch = useDispatch()
   const { currentContent: content, loading } = useSelector((state) => state.content)
+  const { user } = useSelector((state) => state.auth)
   const { items: comments } = useSelector((state) => state.comments)
 
   useEffect(() => {
@@ -47,6 +49,23 @@ const ContentView = () => {
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Content not found</h2>
         <p className="text-gray-600">The content you're looking for doesn't exist.</p>
+      </div>
+    )
+  }
+
+  // Check if content is flagged and user is not admin
+  if (content.is_flagged && (!user || user.role !== 'admin')) {
+    return (
+      <div className="text-center py-12">
+        <AlertTriangle className="mx-auto text-orange-500 mb-4" size={48} />
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Content Unavailable</h2>
+        <p className="text-gray-600 mb-4">This content has been flagged and is currently under review.</p>
+        <button
+          onClick={() => navigate('/')}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+        >
+          Return Home
+        </button>
       </div>
     )
   }

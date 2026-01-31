@@ -177,6 +177,7 @@ class ContentResponse(ContentBase):
     likes_count: int = 0
     dislikes_count: int = 0
     comments_count: int = 0
+    is_flagged: bool = False
 
     class Config:
         from_attributes = True
