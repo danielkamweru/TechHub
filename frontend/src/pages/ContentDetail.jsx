@@ -3,12 +3,12 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { 
   Play, Headphones, BookOpen, Heart, Bookmark, Share2, MessageCircle, 
-  ArrowLeft, User, ThumbsDown, Eye, Calendar, Pause, SkipBack, SkipForward, Volume2
+  ArrowLeft, User, ThumbsDown, Eye, Calendar, Pause, SkipBack, SkipForward, Volume2, Bell, BellOff
 } from 'lucide-react'
 import { fetchContentById, likeContent, downvoteContent } from '../features/content/contentSlice'
 import { addToWishlist, removeFromWishlist } from '../features/wishlist/wishlistSlice'
+import { subscribeToCategory, unsubscribeFromCategory, fetchUserSubscriptions } from '../features/categories/categoriesSlice'
 import CommentThread from '../components/CommentThread'
-import api from '../services/api'
 
 // Custom Audio Player Component with Smart Embedding
 const CustomAudioPlayer = ({ src, title, thumbnail }) => {
@@ -445,50 +445,42 @@ const ContentDetail = () => {
   const navigate = useNavigate()
   const dispatch = useDispatch()
   const { currentContent, loading, userLikes } = useSelector((state) => state.content)
-  const { isAuthenticated, user } = useSelector((state) => state.auth)
+  const { isAuthenticated } = useSelector((state) => state.auth)
   const { items: wishlistItems } = useSelector((state) => state.wishlist)
-  const [comments, setComments] = useState([])
-  const [newComment, setNewComment] = useState('')
-  const [replyTo, setReplyTo] = useState(null)
+  const { items: commentList } = useSelector((state) => state.comments)
+  const { subscribedIds } = useSelector((state) => state.categories)
+  const categoryId = currentContent?.category_id ?? currentContent?.category?.id
+  const isSubscribed = categoryId ? subscribedIds.includes(categoryId) : false
 
   // Get like/dislike status from persisted userLikes
   const userLike = userLikes.find(like => like.content_id === parseInt(id))
   const isLiked = userLike?.is_like || false
   const isDisliked = userLike?.is_like === false || false
   const isInWishlist = wishlistItems.some(item => item.id === parseInt(id))
+  const commentsCount = (commentList || []).reduce((acc, c) => acc + 1 + (c.replies?.length || 0), 0)
 
   useEffect(() => {
     if (id) {
       dispatch(fetchContentById(id))
-      fetchComments()
     }
   }, [dispatch, id])
 
-  const fetchComments = async () => {
-    try {
-      const response = await api.get(`/comments/content/${id}`)
-      setComments(response.data || [])
-    } catch (error) {
-      console.error('Failed to fetch comments:', error)
-      setComments([])
+  useEffect(() => {
+    if (isAuthenticated) {
+      dispatch(fetchUserSubscriptions())
     }
-  }
+  }, [isAuthenticated, dispatch])
 
-  const handleAddComment = async (e) => {
-    e.preventDefault()
-    if (!newComment.trim() || !isAuthenticated) return
-    
-    try {
-      const response = await api.post('/comments', {
-        content_id: parseInt(id),
-        text: newComment,
-        parent_id: replyTo || null
-      })
-      setComments([...comments, response.data])
-      setNewComment('')
-      setReplyTo(null)
-    } catch (error) {
-      console.error('Failed to add comment:', error)
+  const handleSubscribe = () => {
+    if (!isAuthenticated) {
+      navigate('/login')
+      return
+    }
+    if (!categoryId) return
+    if (isSubscribed) {
+      dispatch(unsubscribeFromCategory(categoryId))
+    } else {
+      dispatch(subscribeToCategory(categoryId))
     }
   }
 
@@ -518,16 +510,37 @@ const ContentDetail = () => {
     }
   }
 
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: currentContent.title,
-        text: currentContent.content_text,
-        url: window.location.href
-      }).catch(console.error)
-    } else {
-      navigator.clipboard.writeText(window.location.href)
-      alert('Link copied to clipboard!')
+  const [shareCopied, setShareCopied] = useState(false)
+  const handleShare = async () => {
+    const url = window.location.href
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: currentContent.title,
+          text: currentContent.content_text,
+          url
+        })
+      } else {
+        await navigator.clipboard.writeText(url)
+        setShareCopied(true)
+        setTimeout(() => setShareCopied(false), 2000)
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        await navigator.clipboard.writeText(url)
+        setShareCopied(true)
+        setTimeout(() => setShareCopied(false), 2000)
+      }
+    }
+  }
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href)
+      setShareCopied(true)
+      setTimeout(() => setShareCopied(false), 2000)
+    } catch (e) {
+      console.error('Copy failed', e)
     }
   }
 
@@ -902,7 +915,7 @@ const ContentDetail = () => {
                 </span>
                 <span className="flex items-center gap-1">
                   <MessageCircle size={16} />
-                  {comments.length} comments
+                  {commentsCount} comments
                 </span>
                 <span className="flex items-center gap-1">
                   <Calendar size={16} />
@@ -950,14 +963,43 @@ const ContentDetail = () => {
                   <Bookmark size={20} fill={isInWishlist ? 'currentColor' : 'none'} />
                 </button>
                 
-                {/* Share */}
-                <button
-                  onClick={handleShare}
-                  className="p-2 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors"
-                  title="Share"
-                >
-                  <Share2 size={20} />
-                </button>
+                {/* Subscribe to category */}
+                {categoryId && (
+                  <button
+                    onClick={handleSubscribe}
+                    className={`p-2 rounded-lg transition-colors text-xs font-medium ${
+                      isSubscribed
+                        ? 'text-amber-600 bg-amber-50'
+                        : 'text-gray-400 hover:text-amber-600 hover:bg-amber-50'
+                    }`}
+                    title={isSubscribed ? 'Unsubscribe from category' : 'Subscribe to category for notifications'}
+                  >
+                    {isSubscribed ? <BellOff size={18} /> : <Bell size={18} />}
+                    <span className="ml-1 hidden sm:inline">{isSubscribed ? 'Subscribed' : 'Subscribe'}</span>
+                  </button>
+                )}
+                {/* Share & Copy link */}
+                <div className="relative flex items-center gap-1">
+                  <button
+                    onClick={handleShare}
+                    className="p-2 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors"
+                    title="Share"
+                  >
+                    <Share2 size={20} />
+                  </button>
+                  <button
+                    onClick={handleCopyLink}
+                    className="p-2 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors text-xs font-medium"
+                    title="Copy link"
+                  >
+                    Copy link
+                  </button>
+                  {shareCopied && (
+                    <span className="absolute -top-8 right-0 bg-gray-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
+                      Link copied!
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -976,53 +1018,20 @@ const ContentDetail = () => {
           </div>
         </div>
 
-        {/* Comments Section */}
+        {/* Comments Section - single CommentThread handles form + list */}
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
             <MessageCircle size={24} />
-            Comments ({comments.length})
+            Comments
           </h2>
-
-          {isAuthenticated ? (
-            <form onSubmit={handleAddComment} className="mb-8">
-              {replyTo && (
-                <div className="mb-2 p-2 bg-blue-50 rounded-lg text-sm text-gray-700">
-                  Replying to comment... 
-                  <button 
-                    type="button" 
-                    onClick={() => setReplyTo(null)} 
-                    className="ml-2 text-blue-600 hover:text-blue-700 font-medium"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              )}
-              <textarea
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Add a comment..."
-                className="w-full p-4 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                rows="4"
-              />
-              <div className="flex justify-end mt-2">
-                <button 
-                  type="submit" 
-                  disabled={!newComment.trim()} 
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Post Comment
-                </button>
-              </div>
-            </form>
-          ) : (
-            <div className="mb-8 p-4 bg-gray-50 rounded-lg text-center">
+          {!isAuthenticated && (
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg text-center">
               <p className="text-gray-600 mb-2">Please log in to comment</p>
               <Link to="/login" className="text-blue-600 font-medium hover:text-blue-700">
                 Log In
               </Link>
             </div>
           )}
-
           <CommentThread contentId={id} />
         </div>
       </div>

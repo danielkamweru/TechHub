@@ -59,16 +59,14 @@ const usersSlice = createSlice({
         state.items.push(action.payload)
       })
       .addCase(deactivateUser.fulfilled, (state, action) => {
-        const index = state.items.findIndex(user => user.id === action.payload.id)
-        if (index !== -1) {
-          state.items[index] = action.payload
-        }
+        const userId = action.meta?.arg
+        const index = state.items.findIndex(user => user.id === userId)
+        if (index !== -1) state.items[index].is_active = false
       })
       .addCase(activateUser.fulfilled, (state, action) => {
-        const index = state.items.findIndex(user => user.id === action.payload.id)
-        if (index !== -1) {
-          state.items[index] = action.payload
-        }
+        const userId = action.meta?.arg
+        const index = state.items.findIndex(user => user.id === userId)
+        if (index !== -1) state.items[index].is_active = true
       })
       .addCase(updateUserRole.fulfilled, (state, action) => {
         const index = state.items.findIndex(user => user.id === action.payload.id)

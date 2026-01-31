@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
-import { Menu, X, Bell, User, LogOut, Sparkles } from 'lucide-react'
+import { Menu, X, User, LogOut, Sparkles } from 'lucide-react'
 import { logout } from '../features/auth/authSlice'
+import NotificationCenter from './NotificationCenter'
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false)
   const { user, isAuthenticated } = useSelector((state) => state.auth)
-  const { unreadCount } = useSelector((state) => state.notifications)
   const dispatch = useDispatch()
   const navigate = useNavigate()
 
@@ -63,14 +63,9 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-4">
             {isAuthenticated ? (
               <>
-                <button className="relative p-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
-                  <Bell size={20} />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
-                      {unreadCount}
-                    </span>
-                  )}
-                </button>
+                <div className="relative">
+                  <NotificationCenter />
+                </div>
                 <Link to="/profile" className="p-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
                   <User size={20} />
                 </Link>

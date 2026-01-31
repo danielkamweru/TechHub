@@ -225,6 +225,8 @@ class NotificationResponse(BaseModel):
     message: str
     is_read: bool
     created_at: datetime
+    notification_type: Optional[str] = None
+    related_content_id: Optional[int] = None
 
     class Config:
         from_attributes = True

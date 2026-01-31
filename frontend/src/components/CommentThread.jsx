@@ -1,14 +1,22 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { MessageCircle, ThumbsUp, Reply, Flag } from 'lucide-react'
-import { addComment, likeComment, reportComment } from '../features/comments/commentsSlice'
+import { fetchComments, addComment, likeComment, reportComment } from '../features/comments/commentsSlice'
 
-const CommentThread = ({ contentId, comments = [] }) => {
+const CommentThread = ({ contentId, comments: commentsProp }) => {
   const dispatch = useDispatch()
   const { user } = useSelector((state) => state.auth)
+  const { items: commentsFromStore, loading } = useSelector((state) => state.comments)
+  const comments = commentsProp ?? commentsFromStore ?? []
   const [newComment, setNewComment] = useState('')
   const [replyTo, setReplyTo] = useState(null)
   const [replyText, setReplyText] = useState('')
+
+  useEffect(() => {
+    if (contentId) {
+      dispatch(fetchComments(contentId))
+    }
+  }, [contentId, dispatch])
 
   const handleSubmitComment = async (e) => {
     e.preventDefault()
@@ -16,11 +24,12 @@ const CommentThread = ({ contentId, comments = [] }) => {
 
     try {
       await dispatch(addComment({
-        contentId,
+        contentId: typeof contentId === 'string' ? parseInt(contentId, 10) : contentId,
         text: newComment,
         parentId: null
       })).unwrap()
       setNewComment('')
+      dispatch(fetchComments(contentId))
     } catch (error) {
       console.error('Failed to add comment:', error)
     }
@@ -32,12 +41,13 @@ const CommentThread = ({ contentId, comments = [] }) => {
 
     try {
       await dispatch(addComment({
-        contentId,
+        contentId: typeof contentId === 'string' ? parseInt(contentId, 10) : contentId,
         text: replyText,
         parentId
       })).unwrap()
       setReplyText('')
       setReplyTo(null)
+      dispatch(fetchComments(contentId))
     } catch (error) {
       console.error('Failed to add reply:', error)
     }
@@ -62,9 +72,9 @@ const CommentThread = ({ contentId, comments = [] }) => {
               {comment.author?.name?.charAt(0) || 'U'}
             </div>
             <div>
-              <span className="font-medium text-sm">{comment.author?.name || 'Anonymous'}</span>
+              <span className="font-medium text-sm">{comment.author?.full_name || comment.author?.name || comment.author?.username || 'Anonymous'}</span>
               <span className="text-gray-500 text-xs ml-2">
-                {new Date(comment.createdAt).toLocaleDateString()}
+                {new Date(comment.created_at || comment.createdAt).toLocaleDateString()}
               </span>
             </div>
           </div>
@@ -76,11 +86,11 @@ const CommentThread = ({ contentId, comments = [] }) => {
           <button 
             onClick={() => handleLikeComment(comment.id)}
             className={`flex items-center gap-1 transition-colors ${
-              comment.isLiked ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'
+              comment.is_liked ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'
             }`}
           >
-            <ThumbsUp size={14} fill={comment.isLiked ? 'currentColor' : 'none'} />
-            <span>{comment.likesCount || 0}</span>
+            <ThumbsUp size={14} fill={comment.is_liked ? 'currentColor' : 'none'} />
+            <span>{comment.likes_count ?? comment.likesCount ?? 0}</span>
           </button>
           
           {!isReply && user && (
@@ -93,7 +103,7 @@ const CommentThread = ({ contentId, comments = [] }) => {
             </button>
           )}
           
-          {user && user.id !== comment.author?.id && (
+          {user && user.id !== comment.author_id && user.id !== comment.author?.id && (
             <button 
               onClick={() => handleReportComment(comment.id)}
               className="flex items-center gap-1 text-gray-500 hover:text-red-600 transition-colors"

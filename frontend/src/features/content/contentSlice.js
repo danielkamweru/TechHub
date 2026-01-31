@@ -220,30 +220,52 @@ const contentSlice = createSlice({
       })
       .addCase(likeContent.fulfilled, (state, action) => {
         const { contentId } = action.payload
-        const item = state.items.find(item => item.id === contentId)
+        const isLike = true
+        const existing = state.userLikes.find(l => l.content_id === contentId)
+        if (existing) {
+          existing.is_like = isLike
+        } else {
+          state.userLikes.push({ content_id: contentId, is_like: isLike })
+        }
+        const item = state.items.find(i => i.id === contentId)
         if (item) {
-          item.isLiked = !item.isLiked
-          item.likes_count = item.isLiked ? (item.likes_count || 0) + 1 : Math.max(0, (item.likes_count || 0) - 1)
+          const wasDisliked = item.isDisliked
+          item.isLiked = true
+          item.isDisliked = false
+          item.likes_count = (item.likes_count || 0) + 1
+          if (wasDisliked) item.dislikes_count = Math.max(0, (item.dislikes_count || 0) - 1)
         }
         if (state.currentContent?.id === contentId) {
-          state.currentContent.isLiked = !state.currentContent.isLiked
-          state.currentContent.likes_count = state.currentContent.isLiked 
-            ? (state.currentContent.likes_count || 0) + 1 
-            : Math.max(0, (state.currentContent.likes_count || 0) - 1)
+          const wasDisliked = state.currentContent.isDisliked
+          state.currentContent.isLiked = true
+          state.currentContent.isDisliked = false
+          state.currentContent.likes_count = (state.currentContent.likes_count || 0) + 1
+          if (wasDisliked) state.currentContent.dislikes_count = Math.max(0, (state.currentContent.dislikes_count || 0) - 1)
         }
       })
       .addCase(downvoteContent.fulfilled, (state, action) => {
         const { contentId } = action.payload
-        const item = state.items.find(item => item.id === contentId)
+        const isLike = false
+        const existing = state.userLikes.find(l => l.content_id === contentId)
+        if (existing) {
+          existing.is_like = isLike
+        } else {
+          state.userLikes.push({ content_id: contentId, is_like: isLike })
+        }
+        const item = state.items.find(i => i.id === contentId)
         if (item) {
-          item.isDisliked = !item.isDisliked
-          item.dislikes_count = item.isDisliked ? (item.dislikes_count || 0) + 1 : Math.max(0, (item.dislikes_count || 0) - 1)
+          const wasLiked = item.isLiked
+          item.isDisliked = true
+          item.isLiked = false
+          item.dislikes_count = (item.dislikes_count || 0) + 1
+          if (wasLiked) item.likes_count = Math.max(0, (item.likes_count || 0) - 1)
         }
         if (state.currentContent?.id === contentId) {
-          state.currentContent.isDisliked = !state.currentContent.isDisliked
-          state.currentContent.dislikes_count = state.currentContent.isDisliked 
-            ? (state.currentContent.dislikes_count || 0) + 1 
-            : Math.max(0, (state.currentContent.dislikes_count || 0) - 1)
+          const wasLiked = state.currentContent.isLiked
+          state.currentContent.isDisliked = true
+          state.currentContent.isLiked = false
+          state.currentContent.dislikes_count = (state.currentContent.dislikes_count || 0) + 1
+          if (wasLiked) state.currentContent.likes_count = Math.max(0, (state.currentContent.likes_count || 0) - 1)
         }
       })
       .addCase(fetchUserLikes.fulfilled, (state, action) => {

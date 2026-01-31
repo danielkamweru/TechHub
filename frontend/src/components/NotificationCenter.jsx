@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
-import { Bell, X, Check, Info, AlertTriangle, CheckCircle, MessageSquare, Heart, User, Settings } from 'lucide-react'
+import { Bell, X, Info, AlertTriangle, CheckCircle, MessageSquare, Heart, User, Settings, FileText } from 'lucide-react'
 import { fetchNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '../features/notifications/notificationsSlice'
 
 const NotificationCenter = () => {
@@ -34,18 +35,24 @@ const NotificationCenter = () => {
   }
 
   const getNotificationIcon = (type) => {
-    switch (type) {
+    const t = type?.toLowerCase?.() ?? type
+    switch (t) {
       case 'new_content':
+      case 'system':
         return <FileText className="w-4 h-4 text-blue-600" />
       case 'comment_reply':
+      case 'comment':
         return <MessageSquare className="w-4 h-4 text-green-600" />
       case 'content_approved':
+      case 'status_change':
         return <CheckCircle className="w-4 h-4 text-purple-600" />
       case 'content_flagged':
         return <AlertTriangle className="w-4 h-4 text-red-600" />
       case 'like_received':
+      case 'like':
         return <Heart className="w-4 h-4 text-pink-600" />
       case 'new_follower':
+      case 'follow':
         return <User className="w-4 h-4 text-indigo-600" />
       case 'system_update':
         return <Settings className="w-4 h-4 text-gray-600" />
@@ -62,14 +69,17 @@ const NotificationCenter = () => {
 
   return (
     <div className="relative">
-      {/* Notification Bell */}
+      {/* Notification Bell - red dot + unread count until marked read */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+        aria-label={unreadCount > 0 ? `${unreadCount} unread notifications` : 'Notifications'}
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+          <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white ring-2 ring-white">
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
         )}
       </button>
 
@@ -124,17 +134,16 @@ const NotificationCenter = () => {
           {/* Notifications List */}
           <div className="max-h-96 overflow-y-auto">
             {filteredNotifications.length > 0 ? (
-              filteredNotifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${
-                    !notification.is_read ? 'bg-blue-50' : ''
-                  }`}
-                  onClick={() => handleMarkAsRead(notification.id)}
-                >
+              filteredNotifications.map((notification) => {
+                const contentId = notification.related_content_id
+                const handleClick = () => {
+                  handleMarkAsRead(notification.id)
+                  if (contentId) setIsOpen(false)
+                }
+                const content = (
                   <div className="flex items-start gap-3">
                     <div className="flex-shrink-0 mt-1">
-                      {getNotificationIcon(notification.type)}
+                      {getNotificationIcon(notification.notification_type || notification.type)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900">
@@ -153,8 +162,33 @@ const NotificationCenter = () => {
                       </div>
                     )}
                   </div>
-                </div>
-              ))
+                )
+                return contentId ? (
+                  <Link
+                    key={notification.id}
+                    to={`/content/${contentId}`}
+                    onClick={handleClick}
+                    className={`block p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${
+                      !notification.is_read ? 'bg-blue-50' : ''
+                    }`}
+                  >
+                    {content}
+                  </Link>
+                ) : (
+                  <div
+                    key={notification.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={handleClick}
+                    onKeyDown={e => e.key === 'Enter' && handleClick()}
+                    className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${
+                      !notification.is_read ? 'bg-blue-50' : ''
+                    }`}
+                  >
+                    {content}
+                  </div>
+                )
+              })
             ) : (
               <div className="p-8 text-center">
                 <Bell className="w-12 h-12 text-gray-300 mx-auto mb-4" />

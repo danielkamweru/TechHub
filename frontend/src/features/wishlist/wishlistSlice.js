@@ -44,7 +44,6 @@ export const removeFromWishlist = createAsyncThunk(
   async (contentId, { rejectWithValue, dispatch }) => {
     try {
       await api.delete(`/wishlist/${contentId}`)
-      // Refetch wishlist to get updated list
       dispatch(fetchWishlist())
       return contentId
     } catch (error) {
@@ -87,6 +86,9 @@ const wishlistSlice = createSlice({
       })
       .addCase(removeFromWishlist.fulfilled, (state, action) => {
         state.error = null
+        if (action.payload) {
+          state.items = state.items.filter(item => item.id !== action.payload)
+        }
       })
   },
 })

@@ -8,6 +8,8 @@ import AppRoutes from './routes/AppRoutes'
 import { checkAuth } from './features/auth/authSlice'
 import { fetchUserLikes } from './features/content/contentSlice'
 import { fetchWishlist } from './features/wishlist/wishlistSlice'
+import { fetchUnreadCount } from './features/notifications/notificationsSlice'
+import { fetchUserSubscriptions } from './features/categories/categoriesSlice'
 
 function App() {
   const dispatch = useDispatch()
@@ -21,12 +23,13 @@ function App() {
     }
   }, [dispatch])
 
-  // Fetch user's likes and wishlist when authenticated
+  // Fetch user's likes, wishlist, notification count, and category subscriptions when authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      // Fetch user data first, then content will have like status
       dispatch(fetchUserLikes())
       dispatch(fetchWishlist())
+      dispatch(fetchUnreadCount())
+      dispatch(fetchUserSubscriptions())
     }
   }, [isAuthenticated, dispatch])
 

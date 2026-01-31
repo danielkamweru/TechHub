@@ -5,7 +5,7 @@ export const fetchComments = createAsyncThunk(
   'comments/fetchComments',
   async (contentId, { rejectWithValue }) => {
     try {
-      const response = await api.get(`/content/${contentId}/comments`)
+      const response = await api.get(`/comments/content/${contentId}`)
       return response.data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch comments')
@@ -17,7 +17,12 @@ export const addComment = createAsyncThunk(
   'comments/addComment',
   async (commentData, { rejectWithValue }) => {
     try {
-      const response = await api.post('/comments', commentData)
+      const payload = {
+        content_id: commentData.contentId ?? commentData.content_id,
+        text: commentData.text,
+        parent_id: commentData.parentId ?? commentData.parent_id ?? null
+      }
+      const response = await api.post('/comments', payload)
       return response.data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to add comment')

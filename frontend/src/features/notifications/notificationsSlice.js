@@ -12,7 +12,12 @@ export const markNotificationAsRead = createAsyncThunk('notifications/markNotifi
 })
 
 export const markAllNotificationsAsRead = createAsyncThunk('notifications/markAllNotificationsAsRead', async () => {
-  const response = await api.put('/notifications/read-all')
+  const response = await api.put('/notifications/mark-all-read')
+  return response.data
+})
+
+export const fetchUnreadCount = createAsyncThunk('notifications/fetchUnreadCount', async () => {
+  const response = await api.get('/notifications/unread-count')
   return response.data
 })
 
@@ -26,11 +31,15 @@ const notificationsSlice = createSlice({
         state.unreadCount = action.payload.filter(n => !n.is_read).length
       })
       .addCase(markNotificationAsRead.fulfilled, (state, action) => {
-        const notification = state.items.find(n => n.id === action.payload.id)
+        const notificationId = action.meta?.arg
+        const notification = state.items.find(n => n.id === notificationId)
         if (notification && !notification.is_read) {
           notification.is_read = true
-          state.unreadCount -= 1
+          state.unreadCount = Math.max(0, state.unreadCount - 1)
         }
+      })
+      .addCase(fetchUnreadCount.fulfilled, (state, action) => {
+        state.unreadCount = action.payload?.unread_count ?? 0
       })
       .addCase(markAllNotificationsAsRead.fulfilled, (state) => {
         state.items.forEach(notification => {

@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database.connection import engine
 from app.database.models import Base
-from app.routes import auth, users, content, comments, categories, notifications, wishlist
+from app.routes import auth, users, content, comments, categories, notifications, wishlist, admin_enhanced
 import logging
 
 # Configure logging
@@ -37,6 +37,7 @@ app.include_router(categories.router, prefix="/api/categories", tags=["Categorie
 app.include_router(comments.router, prefix="/api/comments", tags=["Comments"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
 app.include_router(wishlist.router, prefix="/api/wishlist", tags=["Wishlist"])
+app.include_router(admin_enhanced.router, prefix="/api/admin", tags=["Admin"])
 
 @app.get("/")
 async def root():

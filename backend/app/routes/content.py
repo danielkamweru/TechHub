@@ -4,7 +4,8 @@ from sqlalchemy import func, desc
 from typing import List, Optional
 from datetime import datetime
 from app.database.connection import get_db
-from app.database.models import User, Content, ContentStatusEnum, Like, Category, RoleEnum
+from app.database.models import User, Content, ContentStatusEnum, Like, Category, RoleEnum, Notification, NotificationTypeEnum
+from app.database.models import Comment as ContentComment
 from app.schemas.schemas import ContentCreate, ContentUpdate, ContentResponse, LikeCreate
 from app.core.dependencies import get_current_user, require_admin, require_tech_writer_or_admin
 
@@ -38,10 +39,13 @@ def get_content(
         if not content_list:
             return []
         
-        # Add counts safely
+        # Add counts safely (likes, dislikes, comments from DB)
         result = []
         for content in content_list:
             try:
+                likes_count = db.query(Like).filter(Like.content_id == content.id, Like.is_like == True).count()
+                dislikes_count = db.query(Like).filter(Like.content_id == content.id, Like.is_like == False).count()
+                comments_count = db.query(ContentComment).filter(ContentComment.content_id == content.id).count()
                 content_dict = {
                     "id": content.id,
                     "title": content.title,
@@ -57,9 +61,9 @@ def get_content(
                     "published_at": content.published_at.isoformat() if content.published_at else None,
                     "author_id": content.author_id,
                     "category_id": content.category_id,
-                    "likes_count": 0,
-                    "dislikes_count": 0,
-                    "comments_count": 0,
+                    "likes_count": likes_count,
+                    "dislikes_count": dislikes_count,
+                    "comments_count": comments_count,
                     "author": {
                         "id": content.author.id if content.author else None,
                         "username": content.author.username if content.author else "Unknown",
@@ -313,7 +317,24 @@ def approve_content(
     content.status = ContentStatusEnum.PUBLISHED
     content.published_at = datetime.utcnow()
     db.commit()
-    
+    db.refresh(content)
+
+    # Notify category subscribers about new content
+    if content.category_id:
+        category = db.query(Category).options(joinedload(Category.subscribers)).filter(Category.id == content.category_id).first()
+        if category and category.subscribers:
+            for subscriber in category.subscribers:
+                if subscriber.id != content.author_id:
+                    notification = Notification(
+                        user_id=subscriber.id,
+                        notification_type=NotificationTypeEnum.SYSTEM,
+                        title=f"New content in {category.name}",
+                        message=f"\"{content.title}\" was just published.",
+                        related_content_id=content.id
+                    )
+                    db.add(notification)
+            db.commit()
+
     return {"message": "Content approved and published"}
 
 @router.put("/{content_id}/reject")

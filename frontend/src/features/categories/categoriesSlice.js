@@ -27,14 +27,25 @@ export const subscribeToCategory = createAsyncThunk('categories/subscribeToCateg
 })
 
 export const unsubscribeFromCategory = createAsyncThunk('categories/unsubscribeFromCategory', async (categoryId) => {
-  const response = await api.post(`/categories/${categoryId}/unsubscribe`)
-  return response.data
+  await api.delete(`/categories/${categoryId}/subscribe`)
+  return categoryId
+})
+
+export const fetchUserSubscriptions = createAsyncThunk('categories/fetchUserSubscriptions', async (_, { rejectWithValue }) => {
+  try {
+    const response = await api.get('/categories/user/subscriptions')
+    return response.data
+  } catch (error) {
+    return rejectWithValue(error.response?.data?.message || 'Failed to fetch subscriptions')
+  }
 })
 
 const categoriesSlice = createSlice({
   name: 'categories',
   initialState: {
     items: [],
+    subscribedIds: [],
+    userSubscriptions: [],
     loading: false,
     error: null,
   },
@@ -43,6 +54,20 @@ const categoriesSlice = createSlice({
     builder
       .addCase(fetchCategories.fulfilled, (state, action) => {
         state.items = action.payload
+      })
+      .addCase(fetchUserSubscriptions.fulfilled, (state, action) => {
+        state.userSubscriptions = action.payload || []
+        state.subscribedIds = (action.payload || []).map(c => c.id)
+      })
+      .addCase(subscribeToCategory.fulfilled, (state, action) => {
+        const categoryId = action.meta?.arg
+        if (categoryId != null && !state.subscribedIds.includes(categoryId)) {
+          state.subscribedIds.push(categoryId)
+        }
+      })
+      .addCase(unsubscribeFromCategory.fulfilled, (state, action) => {
+        state.subscribedIds = state.subscribedIds.filter(id => id !== action.payload)
+        state.userSubscriptions = state.userSubscriptions.filter(c => c.id !== action.payload)
       })
       .addCase(createCategory.fulfilled, (state, action) => {
         state.items.push(action.payload)

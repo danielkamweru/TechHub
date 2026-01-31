@@ -17,7 +17,7 @@ def build_comment_tree(comments: List[Comment]) -> List[dict]:
     for comment in comments:
         comment_data = {
             "id": comment.id,
-            "content_text": comment.content_text,
+            "text": comment.text,
             "created_at": comment.created_at,
             "updated_at": comment.updated_at,
             "author_id": comment.author_id,
@@ -85,7 +85,7 @@ def create_comment(
             )
     
     db_comment = Comment(
-        content_text=comment.content_text,
+        text=comment.text,
         author_id=current_user.id,
         content_id=comment.content_id,
         parent_id=comment.parent_id
@@ -118,7 +118,7 @@ def get_comment(
 @router.put("/{comment_id}", response_model=CommentResponse)
 def update_comment(
     comment_id: int,
-    content_text: str,
+    text: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -136,7 +136,7 @@ def update_comment(
             detail="Not authorized to update this comment"
         )
     
-    comment.content_text = content_text
+    comment.text = text
     db.commit()
     db.refresh(comment)
     
