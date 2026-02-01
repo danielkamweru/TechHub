@@ -8,7 +8,11 @@ export const fetchWishlist = createAsyncThunk(
       const response = await api.get('/content/user/wishlist')
       return response.data || []
     } catch (error) {
-      // Return empty array instead of rejecting to prevent UI errors
+      // Silently handle 422 and other errors to prevent UI issues
+      if (error.response?.status === 422) {
+        console.log('Wishlist endpoint returned 422 - possibly empty wishlist')
+        return []
+      }
       console.warn('Wishlist fetch failed:', error.response?.data?.message || error.message)
       return []
     }
@@ -22,7 +26,11 @@ export const fetchUserWishlist = createAsyncThunk(
       const response = await api.get('/content/user/wishlist')
       return response.data || []
     } catch (error) {
-      // Return empty array instead of rejecting to prevent UI errors
+      // Silently handle 422 and other errors to prevent UI issues
+      if (error.response?.status === 422) {
+        console.log('Wishlist endpoint returned 422 - possibly empty wishlist')
+        return []
+      }
       console.warn('Wishlist fetch failed:', error.response?.data?.message || error.message)
       return []
     }

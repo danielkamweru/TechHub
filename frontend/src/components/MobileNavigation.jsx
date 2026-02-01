@@ -70,7 +70,7 @@ const MobileNavigation = () => {
       } else if (user?.role === 'tech_writer') {
         items.push({ path: '/tech-writer', label: 'Writer', icon: PenTool })
       } else {
-        items.push({ path: '/user', label: 'Dashboard', icon: BookOpen })
+        items.push({ path: '/user', label: 'Userdashboard', icon: BookOpen })
       }
     }
 
@@ -210,7 +210,7 @@ const MobileNavigation = () => {
             {[
               { path: '/', icon: Home, label: 'Home' },
               { path: '/explore', icon: Search, label: 'Explore' },
-              { path: '/user', icon: BookOpen, label: 'Dashboard' },
+              { path: '/user', icon: BookOpen, label: 'Userdashboard' },
               { path: '/wishlist', icon: Heart, label: 'Wishlist' },
               { path: '/profile', icon: User, label: 'Profile' },
             ].map((item) => {

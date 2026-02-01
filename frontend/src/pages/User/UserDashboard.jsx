@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { Search, Filter, Grid, List, Heart, Bookmark, Eye, Play, Headphones, BookOpen, TrendingUp, Star, Bell, Settings, User, Clock, BarChart3, Plus, PenTool } from 'lucide-react'
-import { fetchContent, likeContent, saveToWishlist } from '../../features/content/contentSlice'
+import { Search, Filter, Grid, List, Heart, Bookmark, Eye, Play, Headphones, BookOpen, TrendingUp, Star, Bell, Settings, User, Clock, BarChart3, Plus, PenTool, X } from 'lucide-react'
+import { fetchContent, likeContent, saveToWishlist, createContent, updateContent, deleteContent } from '../../features/content/contentSlice'
 import { fetchCategories, subscribeToCategory, unsubscribeFromCategory } from '../../features/categories/categoriesSlice'
 import { fetchRecommendations } from '../../features/users/usersSlice'
 import ContentCard from '../../components/ContentCard'
@@ -15,12 +15,24 @@ const UserDashboard = () => {
   const { items: recommendations } = useSelector((state) => state.users)
   const { user } = useSelector((state) => state.auth)
   
-  const [activeTab, setActiveTab] = useState('feed')
+  const [activeTab, setActiveTab] = useState('create')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
   const [selectedType, setSelectedType] = useState('')
   const [viewMode, setViewMode] = useState('grid')
   const [subscribedCategories, setSubscribedCategories] = useState([])
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [editingContent, setEditingContent] = useState(null)
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    content_text: '',
+    content_type: 'article',
+    category_id: '',
+    media_url: '',
+    thumbnail_url: '',
+    tags: ''
+  })
   const [userStats, setUserStats] = useState({
     totalViews: 0,
     totalLikes: 0,
@@ -95,6 +107,68 @@ const UserDashboard = () => {
     }
   }
 
+  const handleCreateContent = async (e) => {
+    e.preventDefault()
+    try {
+      const contentData = {
+        ...formData,
+        category_id: parseInt(formData.category_id)
+      }
+      
+      if (editingContent) {
+        await dispatch(updateContent({ id: editingContent.id, ...contentData })).unwrap()
+      } else {
+        await dispatch(createContent(contentData)).unwrap()
+      }
+      
+      resetContentForm()
+      dispatch(fetchContent())
+    } catch (error) {
+      console.error('Failed to save content:', error)
+    }
+  }
+
+  const resetContentForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+      content_text: '',
+      content_type: 'article',
+      category_id: '',
+      media_url: '',
+      thumbnail_url: '',
+      tags: ''
+    })
+    setShowCreateForm(false)
+    setEditingContent(null)
+  }
+
+  const handleEditContent = (content) => {
+    setFormData({
+      title: content.title,
+      description: content.content_text?.substring(0, 200) || '',
+      content_text: content.content_text || '',
+      content_type: content.content_type,
+      category_id: content.category_id?.toString() || '',
+      media_url: content.media_url || '',
+      thumbnail_url: content.thumbnail_url || '',
+      tags: content.tags || ''
+    })
+    setEditingContent(content)
+    setShowCreateForm(true)
+  }
+
+  const handleDeleteContent = async (id) => {
+    if (window.confirm('Are you sure you want to delete this content?')) {
+      try {
+        await dispatch(deleteContent(id)).unwrap()
+        dispatch(fetchContent())
+      } catch (error) {
+        console.error('Failed to delete content:', error)
+      }
+    }
+  }
+
   // Filter content based on active tab
   const getFilteredContent = () => {
     let filtered = content || []
@@ -137,17 +211,8 @@ const UserDashboard = () => {
   const filteredContent = getFilteredContent()
 
   const tabs = [
-    { id: 'feed', label: 'Feed', icon: Grid },
-    { id: 'for-you', label: 'For You', icon: Heart },
-    { id: 'recommended', label: 'Recommended', icon: Star },
-    { id: 'wishlist', label: 'Wishlist', icon: Bookmark },
-    { id: 'subscriptions', label: 'Subscriptions', icon: Bell },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3 }
+    { id: 'create', label: 'Create Content', icon: Plus }
   ]
-
-  if (user?.role === 'admin') {
-    tabs.push({ id: 'admin', label: 'Admin', icon: Settings })
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -169,45 +234,6 @@ const UserDashboard = () => {
           </a>
         </div>
 
-        {/* User Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center">
-              <Eye className="h-8 w-8 text-blue-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Content Viewed</p>
-                <p className="text-2xl font-bold text-gray-900">{userStats.totalViews}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center">
-              <Heart className="h-8 w-8 text-red-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Content Liked</p>
-                <p className="text-2xl font-bold text-gray-900">{userStats.totalLikes}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center">
-              <BookOpen className="h-8 w-8 text-green-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Comments</p>
-                <p className="text-2xl font-bold text-gray-900">{userStats.totalComments}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center">
-              <Bell className="h-8 w-8 text-purple-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Subscriptions</p>
-                <p className="text-2xl font-bold text-gray-900">{subscribedCategories.length}</p>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Navigation Tabs */}
         <div className="mb-6">
@@ -232,179 +258,136 @@ const UserDashboard = () => {
           </div>
         </div>
 
-        {/* Search and Filters - Sticky */}
-        {(activeTab === 'feed' || activeTab === 'for-you' || activeTab === 'recommended' || activeTab === 'wishlist') && (
-          <div className="sticky top-4 z-10 bg-white rounded-lg shadow-sm border p-4 mb-6">
-            <div className="flex flex-col lg:flex-row gap-4">
-              {/* Search */}
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <input
-                    type="text"
-                    placeholder="Search content..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-
-              {/* Filters */}
-              <div className="flex gap-3">
-                {/* Content Type Filter */}
-                <select
-                  value={selectedType}
-                  onChange={(e) => setSelectedType(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">All Types</option>
-                  <option value="video">Videos</option>
-                  <option value="podcast">Podcasts</option>
-                  <option value="article">Articles</option>
-                  <option value="audio">Audio</option>
-                </select>
-
-                {/* Category Filter */}
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">All Categories</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.name}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-
-                {/* View Mode Toggle */}
-                <div className="flex border border-gray-300 rounded-lg overflow-hidden">
-                  <button
-                    onClick={() => setViewMode('grid')}
-                    className={`p-2 ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-                  >
-                    <Grid className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setViewMode('list')}
-                    className={`p-2 ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-                  >
-                    <List className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Content Area */}
         <div className="space-y-6">
-          {activeTab === 'subscriptions' && (
-            <UserSubscriptions />
-          )}
-
-          {activeTab === 'analytics' && (
+          {activeTab === 'create' && (
             <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-semibold mb-6">Your Learning Analytics</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h3 className="font-medium mb-4">Engagement Overview</h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Total Content Consumed</span>
-                      <span className="font-medium">{userStats.contentConsumed}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Average Engagement Rate</span>
-                      <span className="font-medium">
-                        {userStats.totalViews > 0 ? 
-                          Math.round((userStats.totalLikes / userStats.totalViews) * 100) : 0}%
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Comments Posted</span>
-                      <span className="font-medium">{userStats.totalComments}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h3 className="font-medium mb-4">Content Preferences</h3>
-                  <div className="space-y-3">
-                    {['video', 'article', 'podcast', 'audio'].map(type => {
-                      const count = filteredContent.filter(c => c.content_type === type).length
-                      const total = filteredContent.length || 1
-                      const percentage = Math.round((count / total) * 100)
-                      return (
-                        <div key={type}>
-                          <div className="flex justify-between mb-1">
-                            <span className="text-gray-600 capitalize">{type}s</span>
-                            <span className="font-medium">{count} ({percentage}%)</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-blue-600 h-2 rounded-full" 
-                              style={{ width: `${percentage}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold">Create New Content</h2>
+                <button
+                  onClick={() => setShowCreateForm(!showCreateForm)}
+                  className="btn-primary flex items-center gap-2"
+                >
+                  {showCreateForm ? <X size={16} /> : <Plus size={16} />}
+                  {showCreateForm ? 'Cancel' : 'Create Content'}
+                </button>
               </div>
-            </div>
-          )}
 
-          {activeTab === 'admin' && user?.role === 'admin' && (
-            <AdminActions />
-          )}
+              {showCreateForm && (
+                <div className="border-t pt-6">
+                  <form onSubmit={handleCreateContent} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Title *</label>
+                        <input
+                          type="text"
+                          value={formData.title}
+                          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          required
+                        />
+                      </div>
 
-          {(activeTab === 'feed' || activeTab === 'for-you' || activeTab === 'recommended' || activeTab === 'wishlist') && (
-            <div>
-              {/* Content Grid/List */}
-              {loading ? (
-                <div className="flex justify-center items-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                </div>
-              ) : filteredContent.length > 0 ? (
-                <div className={
-                  viewMode === 'grid'
-                    ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
-                    : 'space-y-4'
-                }>
-                  {filteredContent.map((item) => (
-                    <ContentCard
-                      key={item.id}
-                      content={item}
-                      compact={viewMode === 'list'}
-                      onLike={() => handleLike(item.id)}
-                      onSaveToWishlist={() => handleSaveToWishlist(item.id)}
-                      showActions={true}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <div className="text-gray-400 mb-4">
-                    {activeTab === 'for-you' && <Heart className="w-16 h-16 mx-auto mb-4" />}
-                    {activeTab === 'wishlist' && <Bookmark className="w-16 h-16 mx-auto mb-4" />}
-                    {activeTab === 'recommended' && <Star className="w-16 h-16 mx-auto mb-4" />}
-                    {activeTab === 'feed' && <Grid className="w-16 h-16 mx-auto mb-4" />}
-                  </div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    {activeTab === 'for-you' && 'No personalized content yet'}
-                    {activeTab === 'wishlist' && 'Your wishlist is empty'}
-                    {activeTab === 'recommended' && 'No recommendations available'}
-                    {activeTab === 'feed' && 'No content found'}
-                  </h3>
-                  <p className="text-gray-600">
-                    {activeTab === 'for-you' && 'Start interacting with content to get personalized recommendations.'}
-                    {activeTab === 'wishlist' && 'Save content to your wishlist to access it later.'}
-                    {activeTab === 'recommended' && 'Subscribe to categories to get personalized recommendations.'}
-                    {activeTab === 'feed' && 'Try adjusting your search or filter criteria.'}
-                  </p>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Content Type *</label>
+                        <select
+                          value={formData.content_type}
+                          onChange={(e) => setFormData({ ...formData, content_type: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="article">Article</option>
+                          <option value="video">Video</option>
+                          <option value="audio">Audio/Podcast</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
+                      <select
+                        value={formData.category_id}
+                        onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                      >
+                        <option value="">Select a category</option>
+                        {categories.map(category => (
+                          <option key={category.id} value={category.id}>
+                            {category.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
+                      <textarea
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        rows="3"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Brief description of your content..."
+                        required
+                      />
+                    </div>
+
+                    {(formData.content_type === 'video' || formData.content_type === 'audio') && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Media URL</label>
+                        <input
+                          type="url"
+                          value={formData.media_url}
+                          onChange={(e) => setFormData({ ...formData, media_url: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="https://youtube.com/watch?v=... or audio URL"
+                        />
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Thumbnail URL</label>
+                      <input
+                        type="url"
+                        value={formData.thumbnail_url}
+                        onChange={(e) => setFormData({ ...formData, thumbnail_url: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="https://example.com/thumbnail.jpg"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Content *</label>
+                      <textarea
+                        value={formData.content_text}
+                        onChange={(e) => setFormData({ ...formData, content_text: e.target.value })}
+                        rows="12"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Write your content here..."
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Tags</label>
+                      <input
+                        type="text"
+                        value={formData.tags}
+                        onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="javascript, react, tutorial (comma-separated)"
+                      />
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
+                      <button type="submit" className="btn-primary">
+                        {editingContent ? 'Update Content' : 'Create Content'}
+                      </button>
+                      <button type="button" onClick={resetContentForm} className="btn-secondary">
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
                 </div>
               )}
             </div>
