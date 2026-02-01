@@ -26,6 +26,8 @@ const AdminDashboard = () => {
     role: 'user'
   })
   const [newCategory, setNewCategory] = useState({ name: '', description: '', color: '#3B82F6' })
+  const [editingCategory, setEditingCategory] = useState(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null)
 
   // Save active tab to localStorage whenever it changes
   useEffect(() => {
@@ -83,8 +85,39 @@ const AdminDashboard = () => {
       setNewCategory({ name: '', description: '', color: '#3B82F6' })
       setShowCreateCategory(false)
       dispatch(fetchCategories())
+      toast.success('Category created successfully!')
     } catch (error) {
       console.error('Failed to create category:', error)
+      toast.error('Failed to create category')
+    }
+  }
+
+  const handleEditCategory = (category) => {
+    setEditingCategory({ ...category })
+  }
+
+  const handleUpdateCategory = async (e) => {
+    e.preventDefault()
+    try {
+      await dispatch(updateCategory({ id: editingCategory.id, ...editingCategory })).unwrap()
+      setEditingCategory(null)
+      dispatch(fetchCategories())
+      toast.success('Category updated successfully!')
+    } catch (error) {
+      console.error('Failed to update category:', error)
+      toast.error('Failed to update category')
+    }
+  }
+
+  const handleDeleteCategory = async (categoryId) => {
+    try {
+      await dispatch(deleteCategory(categoryId)).unwrap()
+      setShowDeleteConfirm(null)
+      dispatch(fetchCategories())
+      toast.success('Category deleted successfully!')
+    } catch (error) {
+      console.error('Failed to delete category:', error)
+      toast.error('Failed to delete category')
     }
   }
 
@@ -474,10 +507,18 @@ const AdminDashboard = () => {
                           </p>
                         </div>
                         <div className="flex items-center gap-1">
-                          <button className="text-blue-600 hover:bg-blue-50 p-1 rounded">
+                          <button 
+                            onClick={() => handleEditCategory(category)}
+                            className="text-blue-600 hover:bg-blue-50 p-1 rounded"
+                            title="Edit category"
+                          >
                             <Edit size={16} />
                           </button>
-                          <button className="text-red-600 hover:bg-red-50 p-1 rounded">
+                          <button 
+                            onClick={() => setShowDeleteConfirm(category.id)}
+                            className="text-red-600 hover:bg-red-50 p-1 rounded"
+                            title="Delete category"
+                          >
                             <Trash2 size={16} />
                           </button>
                         </div>
@@ -676,6 +717,84 @@ const AdminDashboard = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Category Modal */}
+        {editingCategory && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <h2 className="text-xl font-bold mb-4">Edit Category</h2>
+              <form onSubmit={handleUpdateCategory} className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Category name"
+                  value={editingCategory.name}
+                  onChange={(e) => setEditingCategory({...editingCategory, name: e.target.value})}
+                  className="w-full p-3 border rounded-lg"
+                  required
+                />
+                <textarea
+                  placeholder="Description"
+                  value={editingCategory.description}
+                  onChange={(e) => setEditingCategory({...editingCategory, description: e.target.value})}
+                  className="w-full p-3 border rounded-lg h-24 resize-none"
+                />
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium">Color:</label>
+                  <input
+                    type="color"
+                    value={editingCategory.color}
+                    onChange={(e) => setEditingCategory({...editingCategory, color: e.target.value})}
+                    className="w-12 h-8 border rounded"
+                  />
+                  <span className="text-sm text-gray-600">{editingCategory.color}</span>
+                </div>
+                <div className="flex gap-2">
+                  <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg">
+                    Update Category
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingCategory(null)}
+                    className="bg-gray-300 px-4 py-2 rounded-lg"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-sm">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <Trash2 size={20} className="text-red-600" />
+                </div>
+                <h2 className="text-xl font-bold">Delete Category</h2>
+              </div>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete this category? This action cannot be undone and may affect content associated with this category.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleDeleteCategory(showDeleteConfirm)}
+                  className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+                >
+                  Delete
+                </button>
+                <button
+                  onClick={() => setShowDeleteConfirm(null)}
+                  className="flex-1 bg-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         )}
