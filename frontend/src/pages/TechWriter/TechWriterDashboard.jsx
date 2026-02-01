@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { PenTool, Plus, FileText, BarChart3, CheckCircle, XCircle, Eye, Flag, Clock, Users, TrendingUp } from 'lucide-react'
-import { fetchContent, createContent, approveContent, rejectContent, flagContent } from '../../features/content/contentSlice'
-import { fetchCategories } from '../../features/categories/categoriesSlice'
+import { PenTool, Plus, FileText, BarChart3, CheckCircle, XCircle, Eye, Flag, Clock, Users, TrendingUp, Edit, Save, X, Folder } from 'lucide-react'
+import { fetchContent, createContent, updateContent, approveContent, rejectContent, flagContent } from '../../features/content/contentSlice'
+import { fetchCategories, createCategory } from '../../features/categories/categoriesSlice'
 
 const TechWriterDashboard = () => {
   const dispatch = useDispatch()
   const { items: content } = useSelector((state) => state.content)
   const { items: categories } = useSelector((state) => state.categories)
   const [showCreateForm, setShowCreateForm] = useState(false)
+  const [editingContent, setEditingContent] = useState(null)
+  const [showCategoryForm, setShowCategoryForm] = useState(false)
   const [activeTab, setActiveTab] = useState('my-content')
+  const [newCategory, setNewCategory] = useState({ name: '', description: '', color: '#3B82F6' })
   const [newContent, setNewContent] = useState({
     title: '',
     content_text: '',
@@ -40,6 +43,61 @@ const TechWriterDashboard = () => {
       dispatch(fetchContent())
     } catch (error) {
       console.error('Failed to create content:', error)
+    }
+  }
+
+  const handleEditContent = async (contentItem) => {
+    setEditingContent(contentItem)
+    setNewContent({
+      title: contentItem.title,
+      content_text: contentItem.content_text,
+      content_type: contentItem.content_type,
+      media_url: contentItem.media_url || '',
+      thumbnail_url: contentItem.thumbnail_url || '',
+      category_id: contentItem.category_id
+    })
+  }
+
+  const handleUpdateContent = async (e) => {
+    e.preventDefault()
+    try {
+      await dispatch(updateContent({ id: editingContent.id, ...newContent })).unwrap()
+      setEditingContent(null)
+      setNewContent({
+        title: '',
+        content_text: '',
+        content_type: 'article',
+        media_url: '',
+        thumbnail_url: '',
+        category_id: ''
+      })
+      dispatch(fetchContent())
+    } catch (error) {
+      console.error('Failed to update content:', error)
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setEditingContent(null)
+    setNewContent({
+      title: '',
+      content_text: '',
+      content_type: 'article',
+      media_url: '',
+      thumbnail_url: '',
+      category_id: ''
+    })
+  }
+
+  const handleCreateCategory = async (e) => {
+    e.preventDefault()
+    try {
+      await dispatch(createCategory(newCategory)).unwrap()
+      setNewCategory({ name: '', description: '', color: '#3B82F6' })
+      setShowCategoryForm(false)
+      dispatch(fetchCategories())
+    } catch (error) {
+      console.error('Failed to create category:', error)
     }
   }
 
@@ -78,6 +136,7 @@ const TechWriterDashboard = () => {
     { id: 'my-content', label: 'My Content', icon: FileText },
     { id: 'pending-review', label: 'Pending Review', icon: Clock },
     { id: 'published', label: 'Published', icon: CheckCircle },
+    { id: 'categories', label: 'Categories', icon: Folder },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 }
   ]
 
@@ -203,8 +262,12 @@ const TechWriterDashboard = () => {
                             <button className="text-blue-600 hover:bg-blue-50 p-2 rounded">
                               <Eye size={16} />
                             </button>
-                            <button className="text-gray-600 hover:bg-gray-50 p-2 rounded">
-                              <PenTool size={16} />
+                            <button 
+                              onClick={() => handleEditContent(item)}
+                              className="text-gray-600 hover:bg-gray-50 p-2 rounded"
+                              title="Edit"
+                            >
+                              <Edit size={16} />
                             </button>
                           </div>
                         </div>
@@ -322,6 +385,42 @@ const TechWriterDashboard = () => {
               </div>
             )}
 
+            {activeTab === 'categories' && (
+              <div>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold">Categories</h2>
+                  <button
+                    onClick={() => setShowCategoryForm(true)}
+                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                  >
+                    <Plus size={18} />
+                    Create Category
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {(categories || []).map((category) => (
+                    <div key={category.id} className="border rounded-lg p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div 
+                              className="w-4 h-4 rounded-full" 
+                              style={{ backgroundColor: category.color }}
+                            ></div>
+                            <h3 className="font-medium">{category.name}</h3>
+                          </div>
+                          <p className="text-gray-600 text-sm">{category.description}</p>
+                          <p className="text-xs text-gray-500 mt-2">
+                            {category.content?.length || 0} items
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {activeTab === 'analytics' && (
               <div>
                 <h2 className="text-xl font-semibold mb-4">Content Analytics</h2>
@@ -382,12 +481,14 @@ const TechWriterDashboard = () => {
           </div>
         </div>
 
-        {/* Create Content Modal */}
-        {showCreateForm && (
+        {/* Create/Edit Content Modal */}
+        {(showCreateForm || editingContent) && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-              <h2 className="text-xl font-bold mb-4">Create New Content</h2>
-              <form onSubmit={handleCreateContent} className="space-y-4">
+              <h2 className="text-xl font-bold mb-4">
+                {editingContent ? 'Edit Content' : 'Create New Content'}
+              </h2>
+              <form onSubmit={editingContent ? handleUpdateContent : handleCreateContent} className="space-y-4">
                 <input
                   type="text"
                   placeholder="Title"
@@ -440,11 +541,72 @@ const TechWriterDashboard = () => {
                 />
                 <div className="flex gap-2">
                   <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg">
-                    Create
+                    {editingContent ? (
+                      <>
+                        <Save size={16} className="inline mr-1" />
+                        Update
+                      </>
+                    ) : (
+                      <>
+                        <Plus size={16} className="inline mr-1" />
+                        Create
+                      </>
+                    )}
                   </button>
                   <button
                     type="button"
-                    onClick={() => setShowCreateForm(false)}
+                    onClick={() => {
+                      setShowCreateForm(false)
+                      if (editingContent) handleCancelEdit()
+                    }}
+                    className="bg-gray-300 px-4 py-2 rounded-lg"
+                  >
+                    <X size={16} className="inline mr-1" />
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Create Category Modal */}
+        {showCategoryForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <h2 className="text-xl font-bold mb-4">Create New Category</h2>
+              <form onSubmit={handleCreateCategory} className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Category name"
+                  value={newCategory.name}
+                  onChange={(e) => setNewCategory({...newCategory, name: e.target.value})}
+                  className="w-full p-3 border rounded-lg"
+                  required
+                />
+                <textarea
+                  placeholder="Description"
+                  value={newCategory.description}
+                  onChange={(e) => setNewCategory({...newCategory, description: e.target.value})}
+                  className="w-full p-3 border rounded-lg h-24 resize-none"
+                />
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium">Color:</label>
+                  <input
+                    type="color"
+                    value={newCategory.color}
+                    onChange={(e) => setNewCategory({...newCategory, color: e.target.value})}
+                    className="w-12 h-8 border rounded"
+                  />
+                  <span className="text-sm text-gray-600">{newCategory.color}</span>
+                </div>
+                <div className="flex gap-2">
+                  <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg">
+                    Create Category
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowCategoryForm(false)}
                     className="bg-gray-300 px-4 py-2 rounded-lg"
                   >
                     Cancel

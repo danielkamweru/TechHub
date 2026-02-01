@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.database.connection import get_db
-from app.database.models import User, Content, Comment, RoleEnum
+from app.database.models import User, Content, Comment, RoleEnum, CommentLike
 from app.schemas.schemas import CommentCreate, CommentResponse
 from app.core.dependencies import get_current_user
 
@@ -213,3 +213,47 @@ def get_comment_replies(
     
     replies = db.query(Comment).filter(Comment.parent_id == comment_id).all()
     return replies
+@router.post("/{comment_id}/like")
+def like_comment(
+    comment_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Like or unlike a comment"""
+    comment = db.query(Comment).filter(Comment.id == comment_id).first()
+    if not comment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Comment not found"
+        )
+    
+    # Check if user already liked this comment
+    existing_like = db.query(CommentLike).filter(
+        CommentLike.user_id == current_user.id,
+        CommentLike.comment_id == comment_id
+    ).first()
+    
+    if existing_like:
+        # Unlike the comment
+        db.delete(existing_like)
+        action = "unliked"
+    else:
+        # Like the comment
+        new_like = CommentLike(
+            user_id=current_user.id,
+            comment_id=comment_id
+        )
+        db.add(new_like)
+        action = "liked"
+    
+    db.commit()
+    
+    # Get updated like count
+    likes_count = db.query(CommentLike).filter(CommentLike.comment_id == comment_id).count()
+    
+    return {
+        "comment_id": comment_id,
+        "message": f"Comment {action} successfully",
+        "likes_count": likes_count,
+        "is_liked": action == "liked"
+    }

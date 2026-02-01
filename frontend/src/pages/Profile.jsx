@@ -83,12 +83,20 @@ const Profile = () => {
       console.log('Upload response:', response.data)
       
       // Update the form data with new avatar URL
-      setFormData(prev => ({ ...prev, avatar_url: response.data.avatar_url }))
+      const newAvatarUrl = response.data.avatar_url
+      setFormData(prev => ({ ...prev, avatar_url: newAvatarUrl }))
       
-      // Update the user in Redux store
+      // Update the user in Redux store with the complete user data from response
       dispatch({ type: 'auth/updateUserProfile/fulfilled', payload: response.data.user })
       
-      console.log('Avatar URL updated to:', response.data.avatar_url)
+      console.log('Avatar URL updated to:', newAvatarUrl)
+      
+      // Force a re-render by updating a timestamp
+      const timestamp = new Date().getTime()
+      setFormData(prev => ({ 
+        ...prev, 
+        avatar_url: `${newAvatarUrl}?t=${timestamp}` 
+      }))
       
     } catch (error) {
       console.error('Failed to upload image:', error)

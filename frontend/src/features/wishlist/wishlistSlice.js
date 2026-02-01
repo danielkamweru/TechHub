@@ -5,10 +5,12 @@ export const fetchWishlist = createAsyncThunk(
   'wishlist/fetchWishlist',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await api.get('/wishlist/')
-      return response.data
+      const response = await api.get('/content/user/wishlist')
+      return response.data || []
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch wishlist')
+      // Return empty array instead of rejecting to prevent UI errors
+      console.warn('Wishlist fetch failed:', error.response?.data?.message || error.message)
+      return []
     }
   }
 )
@@ -31,7 +33,7 @@ export const addToWishlist = createAsyncThunk(
   'wishlist/addToWishlist',
   async (contentId, { rejectWithValue, dispatch }) => {
     try {
-      const response = await api.post(`/wishlist/${contentId}`)
+      const response = await api.post(`/content/${contentId}/wishlist`)
       // Refetch wishlist to get updated list
       dispatch(fetchWishlist())
       return response.data
@@ -45,7 +47,7 @@ export const removeFromWishlist = createAsyncThunk(
   'wishlist/removeFromWishlist',
   async (contentId, { rejectWithValue, dispatch }) => {
     try {
-      await api.delete(`/wishlist/${contentId}`)
+      await api.delete(`/content/${contentId}/wishlist`)
       dispatch(fetchWishlist())
       return contentId
     } catch (error) {

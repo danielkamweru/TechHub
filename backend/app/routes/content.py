@@ -4,7 +4,7 @@ from sqlalchemy import func, desc
 from typing import List, Optional
 from datetime import datetime
 from app.database.connection import get_db
-from app.database.models import User, Content, ContentStatusEnum, Like, Category, RoleEnum, Notification, NotificationTypeEnum
+from app.database.models import User, Content, ContentStatusEnum, Like, Category, RoleEnum, Notification, NotificationTypeEnum, user_wishlist
 from app.database.models import Comment as ContentComment
 from app.schemas.schemas import ContentCreate, ContentUpdate, ContentResponse, LikeCreate
 from app.core.dependencies import get_current_user, require_admin, require_tech_writer_or_admin
@@ -581,6 +581,44 @@ def like_content(
         "dislikes_count": dislikes_count
     }
 
+@router.delete("/{content_id}/like")
+def remove_like(
+    content_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    content = db.query(Content).filter(Content.id == content_id).first()
+    if not content:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Content not found"
+        )
+    
+    # Find and remove the like/dislike
+    existing_like = db.query(Like).filter(
+        Like.user_id == current_user.id,
+        Like.content_id == content_id
+    ).first()
+    
+    if not existing_like:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No like/dislike found for this content"
+        )
+    
+    db.delete(existing_like)
+    db.commit()
+    
+    # Return updated counts
+    likes_count = db.query(Like).filter(Like.content_id == content_id, Like.is_like == True).count()
+    dislikes_count = db.query(Like).filter(Like.content_id == content_id, Like.is_like == False).count()
+    
+    return {
+        "message": "Like/dislike removed successfully",
+        "likes_count": likes_count,
+        "dislikes_count": dislikes_count
+    }
+
 @router.post("/{content_id}/wishlist")
 def add_to_wishlist(
     content_id: int,
@@ -637,6 +675,29 @@ def remove_from_wishlist(
         return {"message": "Content not in wishlist"}
     
     return {"message": "Content removed from wishlist"}
+
+@router.post("/{content_id}/view")
+def increment_views(
+    content_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Increment content view count"""
+    content = db.query(Content).filter(Content.id == content_id).first()
+    if not content:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Content not found"
+        )
+    
+    # Increment view count
+    content.views_count += 1
+    db.commit()
+    
+    return {
+        "message": "View count incremented",
+        "views_count": content.views_count
+    }
 
 @router.post("/{content_id}/flag")
 def flag_content(

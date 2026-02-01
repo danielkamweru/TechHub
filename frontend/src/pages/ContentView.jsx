@@ -7,6 +7,7 @@ import { fetchComments } from '../features/comments/commentsSlice'
 import CommentThread from '../components/CommentThread'
 import CategoryTag from '../components/CategoryTag'
 import Loader from '../components/Loader'
+import api from '../services/api'
 
 // Helper function to detect podcast websites
 const isPodcastWebsite = (url) => {
@@ -26,6 +27,22 @@ const ContentView = () => {
   useEffect(() => {
     dispatch(fetchContentById(id))
     dispatch(fetchComments(id))
+    
+    // Increment view count when content is loaded
+    const incrementViews = async () => {
+      try {
+        await api.post(`/content/${id}/view`)
+      } catch (error) {
+        console.error('Failed to increment views:', error)
+      }
+    }
+    
+    // Only increment views once per session
+    const viewedContent = JSON.parse(sessionStorage.getItem('viewedContent') || '[]')
+    if (!viewedContent.includes(id)) {
+      incrementViews()
+      sessionStorage.setItem('viewedContent', JSON.stringify([...viewedContent, id]))
+    }
   }, [dispatch, id])
 
   const getContentIcon = () => {

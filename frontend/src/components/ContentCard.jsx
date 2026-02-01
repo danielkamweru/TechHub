@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { Heart, MessageCircle, Share2, Bookmark, Play, FileText, Headphones, Eye, ThumbsDown, Flag } from 'lucide-react'
-import { likeContent, downvoteContent, flagContent } from '../features/content/contentSlice'
+import { toggleLike, toggleDislike, flagContent } from '../features/content/contentSlice'
 import { addToWishlist, removeFromWishlist } from '../features/wishlist/wishlistSlice'
 import CategoryTag from './CategoryTag'
 
@@ -28,7 +28,7 @@ const ContentCard = ({ content, compact = false, onLike, onSaveToWishlist, showA
       if (onLike) {
         onLike(content.id)
       } else {
-        await dispatch(likeContent({ contentId: content.id, isLike: true })).unwrap()
+        await dispatch(toggleLike(content.id)).unwrap()
       }
     } catch (error) {
       console.error('Failed to like content:', error)
@@ -39,7 +39,7 @@ const ContentCard = ({ content, compact = false, onLike, onSaveToWishlist, showA
     if (!user) return
     
     try {
-      await dispatch(downvoteContent({ contentId: content.id, isDislike: true })).unwrap()
+      await dispatch(toggleDislike(content.id)).unwrap()
     } catch (error) {
       console.error('Failed to downvote content:', error)
     }

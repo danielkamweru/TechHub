@@ -90,7 +90,7 @@ const CommentThread = ({ contentId, comments: commentsProp }) => {
             }`}
           >
             <ThumbsUp size={14} fill={comment.is_liked ? 'currentColor' : 'none'} />
-            <span>{comment.likes_count ?? comment.likesCount ?? 0}</span>
+            <span>{comment.likes_count || 0}</span>
           </button>
           
           {!isReply && user && (
@@ -117,11 +117,14 @@ const CommentThread = ({ contentId, comments: commentsProp }) => {
         {replyTo === comment.id && (
           <form onSubmit={(e) => handleSubmitReply(e, comment.id)} className="mt-3">
             <textarea
+              key={`reply-${comment.id}`}
               value={replyText}
               onChange={(e) => setReplyText(e.target.value)}
               placeholder="Write a reply..."
-              className="w-full p-2 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              rows="2"
+              className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              rows="4"
+              style={{ minHeight: '100px' }}
+              autoFocus
             />
             <div className="flex gap-2 mt-2">
               <button type="submit" className="btn-primary text-sm">
@@ -129,7 +132,10 @@ const CommentThread = ({ contentId, comments: commentsProp }) => {
               </button>
               <button 
                 type="button" 
-                onClick={() => setReplyTo(null)}
+                onClick={() => {
+                  setReplyTo(null)
+                  setReplyText('')
+                }}
                 className="btn-secondary text-sm"
               >
                 Cancel

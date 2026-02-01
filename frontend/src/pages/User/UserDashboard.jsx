@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { Search, Filter, Grid, List, Heart, Bookmark, Eye, Play, Headphones, BookOpen, TrendingUp, Star, Bell, Settings, User, Clock, BarChart3 } from 'lucide-react'
+import { Search, Filter, Grid, List, Heart, Bookmark, Eye, Play, Headphones, BookOpen, TrendingUp, Star, Bell, Settings, User, Clock, BarChart3, Plus, PenTool } from 'lucide-react'
 import { fetchContent, likeContent, saveToWishlist } from '../../features/content/contentSlice'
 import { fetchCategories, subscribeToCategory, unsubscribeFromCategory } from '../../features/categories/categoriesSlice'
 import { fetchRecommendations } from '../../features/users/usersSlice'
@@ -153,11 +153,20 @@ const UserDashboard = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome back, {user?.full_name || user?.username}!
-          </h1>
-          <p className="text-gray-600">Discover and manage your tech learning journey</p>
+        <div className="mb-8 flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Welcome back, {user?.full_name || user?.username}!
+            </h1>
+            <p className="text-gray-600">Discover and manage your tech learning journey</p>
+          </div>
+          <a
+            href="/studio"
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <PenTool size={18} />
+            Create Content
+          </a>
         </div>
 
         {/* User Stats Cards */}

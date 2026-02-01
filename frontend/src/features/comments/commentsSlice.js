@@ -117,10 +117,27 @@ const commentsSlice = createSlice({
         }
       })
       .addCase(likeComment.fulfilled, (state, action) => {
-        const index = state.items.findIndex(item => item.id === action.payload.id)
-        if (index !== -1) {
-          state.items[index] = action.payload
+        // Update the comment with the new like data
+        const updateCommentLikes = (comments) => {
+          return comments.map(comment => {
+            if (comment.id === action.payload.comment_id) {
+              return {
+                ...comment,
+                likes_count: action.payload.likes_count,
+                is_liked: action.payload.is_liked
+              }
+            }
+            if (comment.replies) {
+              return {
+                ...comment,
+                replies: updateCommentLikes(comment.replies)
+              }
+            }
+            return comment
+          })
         }
+        
+        state.items = updateCommentLikes(state.items)
       })
       .addCase(deleteComment.fulfilled, (state, action) => {
         state.items = state.items.filter(item => item.id !== action.payload)

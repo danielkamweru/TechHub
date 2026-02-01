@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from typing import List
 from app.database.connection import get_db
-from app.database.models import User, Profile, RoleEnum
+from app.database.models import User, Profile, RoleEnum, Content, Category, Like, ContentStatusEnum, user_categories
 from app.schemas.schemas import UserResponse, UserUpdate, UserCreate
 from app.core.dependencies import get_current_user, require_admin
 from app.core.auth import get_password_hash
@@ -192,5 +192,79 @@ def get_user_recommendations(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Get content recommendations for a user"""
-    return {"recommendations": []}
+    """Get content recommendations for a user based on preferences and behavior"""
+    
+    # Get user's subscribed categories
+    user_subscribed_categories = db.query(Category).join(
+        user_categories, Category.id == user_categories.c.category_id
+    ).filter(user_categories.c.user_id == user_id).all()
+    
+    subscribed_category_ids = [cat.id for cat in user_subscribed_categories]
+    
+    # Get user's liked content to understand preferences
+    user_likes = db.query(Like).filter(
+        Like.user_id == user_id,
+        Like.is_like == True
+    ).all()
+    
+    liked_content_ids = [like.content_id for like in user_likes]
+    liked_content = db.query(Content).filter(Content.id.in_(liked_content_ids)).all()
+    
+    # Get categories from user's liked content
+    preferred_category_ids = list(set([content.category_id for content in liked_content]))
+    
+    # Combine subscribed and preferred categories
+    target_category_ids = list(set(subscribed_category_ids + preferred_category_ids))
+    
+    # Get content from target categories that user hasn't seen/liked
+    recommended_content = db.query(Content).filter(
+        Content.category_id.in_(target_category_ids),
+        Content.status == ContentStatusEnum.PUBLISHED,
+        Content.is_flagged == False,
+        ~Content.id.in_(liked_content_ids)  # Exclude already liked content
+    ).order_by(
+        Content.likes_count.desc(),
+        Content.views_count.desc(),
+        Content.created_at.desc()
+    ).limit(20).all()
+    
+    # If no recommendations from categories, get popular content
+    if not recommended_content:
+        recommended_content = db.query(Content).filter(
+            Content.status == ContentStatusEnum.PUBLISHED,
+            Content.is_flagged == False,
+            ~Content.id.in_(liked_content_ids)
+        ).order_by(
+            Content.likes_count.desc(),
+            Content.views_count.desc()
+        ).limit(20).all()
+    
+    # Format response
+    recommendations = []
+    for content in recommended_content:
+        content_dict = {
+            "id": content.id,
+            "title": content.title,
+            "content_text": content.content_text,
+            "content_type": content.content_type.value,
+            "media_url": content.media_url,
+            "thumbnail_url": content.thumbnail_url,
+            "likes_count": content.likes_count,
+            "dislikes_count": content.dislikes_count,
+            "views_count": content.views_count,
+            "comments_count": len(content.comments) if content.comments else 0,
+            "created_at": content.created_at.isoformat(),
+            "category": {
+                "id": content.category.id,
+                "name": content.category.name,
+                "color": content.category.color
+            } if content.category else None,
+            "author": {
+                "id": content.author.id,
+                "username": content.author.username,
+                "full_name": content.author.full_name
+            } if content.author else None
+        }
+        recommendations.append(content_dict)
+    
+    return {"recommendations": recommendations}
