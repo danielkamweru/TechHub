@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { 
   Play, Headphones, BookOpen, Heart, Bookmark, Share2, MessageCircle, 
-  Search, Filter, ThumbsDown, X, Check
+  Search, Filter, X, Check
 } from 'lucide-react'
 import { fetchContent } from '../features/content/contentSlice'
 import { fetchCategories } from '../features/categories/categoriesSlice'
@@ -28,7 +28,6 @@ const ContentHub = () => {
   const [selectedContent, setSelectedContent] = useState(null)
   const [showComments, setShowComments] = useState(false)
   const [likedContent, setLikedContent] = useState(new Set())
-  const [dislikedContent, setDislikedContent] = useState(new Set())
 
   useEffect(() => {
     dispatch(fetchContent({ limit: 50 }))
@@ -54,39 +53,25 @@ const ContentHub = () => {
 
 
 
-  const handleLike = async (contentId, isLike = true) => {
+  const handleLike = async (contentId) => {
     if (!isAuthenticated) {
       navigate('/login')
       return
     }
     
     try {
-      await dispatch(likeContent({ contentId, isLike })).unwrap()
-      if (isLike) {
-        setLikedContent(prev => {
-          const newSet = new Set(prev)
-          newSet.add(contentId)
-          return newSet
-        })
-        setDislikedContent(prev => {
-          const newSet = new Set(prev)
-          newSet.delete(contentId)
-          return newSet
-        })
-      } else {
-        setDislikedContent(prev => {
-          const newSet = new Set(prev)
-          newSet.add(contentId)
-          return newSet
-        })
-        setLikedContent(prev => {
-          const newSet = new Set(prev)
-          newSet.delete(contentId)
-          return newSet
-        })
-      }
+      await dispatch(likeContent({ contentId, isLike: true })).unwrap()
+      setLikedContent(prev => {
+        const newSet = new Set(prev)
+        if (newSet.has(contentId)) {
+          newSet.delete(contentId) // Unlike
+        } else {
+          newSet.add(contentId) // Like
+        }
+        return newSet
+      })
     } catch (error) {
-      console.error('Failed to like/dislike content:', error)
+      console.error('Failed to like content:', error)
     }
   }
 
@@ -281,7 +266,6 @@ const ContentHub = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredContent.map((item) => {
               const isLiked = likedContent.has(item.id)
-              const isDisliked = dislikedContent.has(item.id)
               const isInWishlist = wishlistItems.some(w => w.id === item.id)
               
               return (
@@ -337,75 +321,60 @@ const ContentHub = () => {
                       {getActionButton(item.content_type, item.id)}
                     </div>
 
-                    {/* Action Buttons Row */}
-                    <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                      <div className="flex items-center gap-2">
-                        {/* Like */}
-                        <button
-                          onClick={() => handleLike(item.id, true)}
-                          className={`p-2 rounded-lg transition-colors ${
-                            isLiked
-                              ? 'text-red-600 bg-red-50'
-                              : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
-                          }`}
-                          title="Like"
-                        >
-                          <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
-                        </button>
-                        
-                        {/* Dislike */}
-                        <button
-                          onClick={() => handleLike(item.id, false)}
-                          className={`p-2 rounded-lg transition-colors ${
-                            isDisliked
-                              ? 'text-gray-600 bg-gray-100'
-                              : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
-                          }`}
-                          title="Dislike"
-                        >
-                          <ThumbsDown size={16} fill={isDisliked ? 'currentColor' : 'none'} />
-                        </button>
-                        
-                        {/* Wishlist */}
-                        <button
-                          onClick={() => handleWishlist(item.id)}
-                          className={`p-2 rounded-lg transition-colors ${
-                            isInWishlist
-                              ? 'text-blue-600 bg-blue-50'
-                              : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
-                          }`}
-                          title="Add to Wishlist"
-                        >
-                          <Bookmark size={16} fill={isInWishlist ? 'currentColor' : 'none'} />
-                        </button>
-                        
-                        {/* Share */}
-                        <button
-                          onClick={() => handleShare(item)}
-                          className="p-2 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors"
-                          title="Share"
-                        >
-                          <Share2 size={16} />
-                        </button>
-                        
-                        {/* Comment */}
-                        <button
-                          onClick={() => {
-                            setSelectedContent(item)
-                            setShowComments(true)
-                          }}
-                          className="p-2 rounded-lg text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-colors"
-                          title="Comment"
-                        >
-                          <MessageCircle size={16} />
-                        </button>
-                      </div>
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2 mb-3">
+                      {/* Like */}
+                      <button
+                        onClick={() => handleLike(item.id)}
+                        className={`p-2 rounded-lg transition-colors ${
+                          isLiked
+                            ? 'text-red-600 bg-red-50'
+                            : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
+                        }`}
+                        title={isLiked ? 'Unlike' : 'Like'}
+                      >
+                        <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
+                      </button>
                       
-                      {/* Stats */}
-                      <div className="flex items-center gap-3 text-xs text-gray-500">
-                        <span>{item.likes_count || 0} likes</span>
-                        <span>{item.comments_count || 0} comments</span>
-                      </div>
+                      {/* Wishlist */}
+                      <button
+                        onClick={() => handleWishlist(item.id)}
+                        className={`p-2 rounded-lg transition-colors ${
+                          isInWishlist
+                            ? 'text-blue-600 bg-blue-50'
+                            : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
+                        }`}
+                        title="Add to Wishlist"
+                      >
+                        <Bookmark size={16} fill={isInWishlist ? 'currentColor' : 'none'} />
+                      </button>
+                      
+                      {/* Share */}
+                      <button
+                        onClick={() => handleShare(item)}
+                        className="p-2 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors"
+                        title="Share"
+                      >
+                        <Share2 size={16} />
+                      </button>
+                      
+                      {/* Comment */}
+                      <button
+                        onClick={() => {
+                          setSelectedContent(item)
+                          setShowComments(true)
+                        }}
+                        className="p-2 rounded-lg text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-colors"
+                        title="Comment"
+                      >
+                        <MessageCircle size={16} />
+                      </button>
+                    </div>
+                    
+                    {/* Stats */}
+                    <div className="flex items-center gap-3 text-xs text-gray-500">
+                      <span>{item.likes_count || 0} likes</span>
+                      <span>{item.comments_count || 0} comments</span>
                     </div>
                   </div>
                 </div>

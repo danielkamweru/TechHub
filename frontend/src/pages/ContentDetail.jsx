@@ -3,9 +3,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { 
   Play, Headphones, BookOpen, Heart, Bookmark, Share2, MessageCircle, 
-  ArrowLeft, User, ThumbsDown, Eye, Calendar, Pause, SkipBack, SkipForward, Volume2, Bell, BellOff
+  ArrowLeft, User, Eye, Calendar, Pause, SkipBack, SkipForward, Volume2, Bell, BellOff
 } from 'lucide-react'
-import { fetchContentById, likeContent, downvoteContent } from '../features/content/contentSlice'
+import { fetchContentById, likeContent } from '../features/content/contentSlice'
 import { addToWishlist, removeFromWishlist } from '../features/wishlist/wishlistSlice'
 import { subscribeToCategory, unsubscribeFromCategory, fetchUserSubscriptions } from '../features/categories/categoriesSlice'
 import CommentThread from '../components/CommentThread'
@@ -452,10 +452,9 @@ const ContentDetail = () => {
   const categoryId = currentContent?.category_id ?? currentContent?.category?.id
   const isSubscribed = categoryId ? subscribedIds.includes(categoryId) : false
 
-  // Get like/dislike status from persisted userLikes
+  // Get like status from persisted userLikes
   const userLike = userLikes.find(like => like.content_id === parseInt(id))
   const isLiked = userLike?.is_like || false
-  const isDisliked = userLike?.is_like === false || false
   const isInWishlist = wishlistItems.some(item => item.id === parseInt(id))
   const commentsCount = (commentList || []).reduce((acc, c) => acc + 1 + (c.replies?.length || 0), 0)
 
@@ -484,16 +483,16 @@ const ContentDetail = () => {
     }
   }
 
-  const handleLike = async (isLike = true) => {
+  const handleLike = async () => {
     if (!isAuthenticated) {
       navigate('/login')
       return
     }
     
     try {
-      await dispatch(likeContent({ contentId: parseInt(id), isLike })).unwrap()
+      await dispatch(likeContent({ contentId: parseInt(id), isLike: !isLiked })).unwrap()
     } catch (error) {
-      console.error('Failed to like/dislike:', error)
+      console.error('Failed to like:', error)
     }
   }
 
@@ -926,28 +925,15 @@ const ContentDetail = () => {
               <div className="flex items-center gap-2">
                 {/* Like */}
                 <button
-                  onClick={() => handleLike(true)}
+                  onClick={handleLike}
                   className={`p-2 rounded-lg transition-colors ${
                     isLiked
                       ? 'text-red-600 bg-red-50'
                       : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
                   }`}
-                  title="Like"
+                  title={isLiked ? 'Unlike' : 'Like'}
                 >
                   <Heart size={20} fill={isLiked ? 'currentColor' : 'none'} />
-                </button>
-                
-                {/* Dislike */}
-                <button
-                  onClick={() => handleLike(false)}
-                  className={`p-2 rounded-lg transition-colors ${
-                    isDisliked
-                      ? 'text-gray-600 bg-gray-100'
-                      : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
-                  }`}
-                  title="Dislike"
-                >
-                  <ThumbsDown size={20} fill={isDisliked ? 'currentColor' : 'none'} />
                 </button>
                 
                 {/* Wishlist */}
