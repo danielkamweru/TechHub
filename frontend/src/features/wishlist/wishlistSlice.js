@@ -1,11 +1,12 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import api from '../../services/api'
+import toast from 'react-hot-toast'
 
 export const fetchWishlist = createAsyncThunk(
   'wishlist/fetchWishlist',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await api.get('/content/user/wishlist')
+      const response = await api.get('/wishlist')
       return response.data || []
     } catch (error) {
       // Silently handle 422 and other errors to prevent UI issues
@@ -23,7 +24,7 @@ export const fetchUserWishlist = createAsyncThunk(
   'wishlist/fetchUserWishlist',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await api.get('/content/user/wishlist')
+      const response = await api.get('/wishlist')
       return response.data || []
     } catch (error) {
       // Silently handle 422 and other errors to prevent UI issues
@@ -41,12 +42,15 @@ export const addToWishlist = createAsyncThunk(
   'wishlist/addToWishlist',
   async (contentId, { rejectWithValue, dispatch }) => {
     try {
-      const response = await api.post(`/content/${contentId}/wishlist`)
+      const response = await api.post(`/wishlist/${contentId}`)
       // Refetch wishlist to get updated list
       dispatch(fetchWishlist())
+      toast.success('Added to wishlist!')
       return response.data
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to add to wishlist')
+      const errorMessage = error.response?.data?.detail || 'Failed to add to wishlist'
+      toast.error(errorMessage)
+      return rejectWithValue(errorMessage)
     }
   }
 )
@@ -55,11 +59,14 @@ export const removeFromWishlist = createAsyncThunk(
   'wishlist/removeFromWishlist',
   async (contentId, { rejectWithValue, dispatch }) => {
     try {
-      await api.delete(`/content/${contentId}/wishlist`)
+      await api.delete(`/wishlist/${contentId}`)
       dispatch(fetchWishlist())
+      toast.success('Removed from wishlist!')
       return contentId
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to remove from wishlist')
+      const errorMessage = error.response?.data?.detail || 'Failed to remove from wishlist'
+      toast.error(errorMessage)
+      return rejectWithValue(errorMessage)
     }
   }
 )
