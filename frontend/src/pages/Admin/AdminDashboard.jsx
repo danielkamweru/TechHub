@@ -28,6 +28,7 @@ const AdminDashboard = () => {
   const [newCategory, setNewCategory] = useState({ name: '', description: '', color: '#3B82F6' })
   const [editingCategory, setEditingCategory] = useState(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null)
+  const [showContentDeleteConfirm, setShowContentDeleteConfirm] = useState(null)
 
   // Save active tab to localStorage whenever it changes
   useEffect(() => {
@@ -133,9 +134,9 @@ const AdminDashboard = () => {
           toast.success('Content rejected successfully!')
           break
         case 'delete':
-          await dispatch(removeContent(contentId)).unwrap()
-          toast.success('Content deleted successfully!')
-          break
+          // Show confirmation dialog instead of directly deleting
+          setShowContentDeleteConfirm(contentId)
+          return
         case 'flag':
           await dispatch(flagContent(contentId)).unwrap()
           toast.success('Content flagged successfully!')
@@ -149,6 +150,18 @@ const AdminDashboard = () => {
     } catch (error) {
       console.error(`Failed to ${action} content:`, error)
       toast.error(`Failed to ${action} content. Please try again.`)
+    }
+  }
+
+  const handleDeleteContent = async (contentId) => {
+    try {
+      await dispatch(removeContent(contentId)).unwrap()
+      setShowContentDeleteConfirm(null)
+      dispatch(fetchContent({ limit: 100, status: null }))
+      toast.success('Content deleted successfully!')
+    } catch (error) {
+      console.error('Failed to delete content:', error)
+      toast.error('Failed to delete content. Please try again.')
     }
   }
 
@@ -790,6 +803,37 @@ const AdminDashboard = () => {
                 </button>
                 <button
                   onClick={() => setShowDeleteConfirm(null)}
+                  className="flex-1 bg-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Content Delete Confirmation Modal */}
+        {showContentDeleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-sm">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <Trash2 size={20} className="text-red-600" />
+                </div>
+                <h2 className="text-xl font-bold">Delete Content</h2>
+              </div>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete this content? This action cannot be undone.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleDeleteContent(showContentDeleteConfirm)}
+                  className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+                >
+                  Delete
+                </button>
+                <button
+                  onClick={() => setShowContentDeleteConfirm(null)}
                   className="flex-1 bg-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400"
                 >
                   Cancel

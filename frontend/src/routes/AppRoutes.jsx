@@ -63,7 +63,7 @@ const AppRoutes = () => {
       {/* User Routes */}
       <Route 
         path="/user/*" 
-        element={<RoleGuard allowedRoles={['user', 'tech_writer', 'admin']}><UserDashboard /></RoleGuard>} 
+        element={<RoleGuard allowedRoles={['user']}><UserDashboard /></RoleGuard>} 
       />
       
       {/* 404 Route */}

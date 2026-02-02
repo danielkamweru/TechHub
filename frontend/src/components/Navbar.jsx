@@ -43,9 +43,11 @@ const Navbar = () => {
             </Link>
             {isAuthenticated && (
               <>
-                <Link to="/user" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
-                  Userdashboard
-                </Link>
+                {user?.role === 'user' && (
+                  <Link to="/user" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+                    Userdashboard
+                  </Link>
+                )}
                 <Link to="/wishlist" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
                   Wishlist
                 </Link>
@@ -72,8 +74,9 @@ const Navbar = () => {
                 <Link to="/profile" className="p-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
                   <User size={20} />
                 </Link>
-                <button onClick={handleLogout} className="p-2 text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all">
+                <button onClick={handleLogout} className="btn-primary flex items-center gap-2">
                   <LogOut size={20} />
+                  Logout
                 </button>
               </>
             ) : (
@@ -110,16 +113,18 @@ const Navbar = () => {
             </Link>
             {isAuthenticated ? (
               <>
-                <Link to="/user" className="block px-3 py-2 text-gray-700 hover:bg-blue-50 rounded-xl font-medium transition-colors">
-                  Userdashboard
-                </Link>
+                {user?.role === 'user' && (
+                  <Link to="/user" className="block px-3 py-2 text-gray-700 hover:bg-blue-50 rounded-xl font-medium transition-colors">
+                    Userdashboard
+                  </Link>
+                )}
                 <Link to="/wishlist" className="block px-3 py-2 text-gray-700 hover:bg-blue-50 rounded-xl font-medium transition-colors">
                   Wishlist
                 </Link>
                 <Link to="/profile" className="block px-3 py-2 text-gray-700 hover:bg-blue-50 rounded-xl font-medium transition-colors">
                   Profile
                 </Link>
-                <button onClick={handleLogout} className="block w-full text-left px-3 py-2 text-gray-700 hover:bg-red-50 rounded-xl font-medium transition-colors">
+                <button onClick={handleLogout} className="block w-full text-left px-3 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-xl font-medium transition-colors">
                   Logout
                 </button>
               </>

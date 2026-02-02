@@ -15,6 +15,7 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
   const [uploading, setUploading] = useState(false)
+  const [avatarKey, setAvatarKey] = useState(0) // Force re-render of avatar
   const [formData, setFormData] = useState({
     full_name: '',
     bio: '',
@@ -82,21 +83,32 @@ const Profile = () => {
       
       console.log('Upload response:', response.data)
       
-      // Update the form data with new avatar URL
+      // Get the avatar URL from response
       const newAvatarUrl = response.data.avatar_url
-      setFormData(prev => ({ ...prev, avatar_url: newAvatarUrl }))
-      
-      // Update the user in Redux store with the complete user data from response
-      dispatch({ type: 'auth/updateUserProfile/fulfilled', payload: response.data.user })
-      
-      console.log('Avatar URL updated to:', newAvatarUrl)
-      
-      // Force a re-render by updating a timestamp
       const timestamp = new Date().getTime()
-      setFormData(prev => ({ 
-        ...prev, 
-        avatar_url: `${newAvatarUrl}?t=${timestamp}` 
-      }))
+      const avatarUrlWithTimestamp = `${newAvatarUrl}?t=${timestamp}`
+      
+      console.log('New avatar URL:', avatarUrlWithTimestamp)
+      
+      // Update form data immediately
+      setFormData(prev => ({ ...prev, avatar_url: avatarUrlWithTimestamp }))
+      
+      // Update the user in Redux store using the proper action
+      if (response.data.user) {
+        console.log('Updating Redux store with user:', response.data.user)
+        dispatch({ type: 'auth/updateUserProfile/fulfilled', payload: response.data.user })
+      }
+      
+      // Show success message
+      alert('Profile picture updated successfully!')
+      
+      // Force re-render of avatar component
+      setAvatarKey(prev => prev + 1)
+      
+      // Force a re-render of the entire component
+      setTimeout(() => {
+        setFormData(prev => ({ ...prev }))
+      }, 100)
       
     } catch (error) {
       console.error('Failed to upload image:', error)
@@ -134,37 +146,75 @@ const Profile = () => {
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
-              <div className="relative">
-                <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center">
+              <div className="relative group">
+                <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
                   {formData.avatar_url ? (
-                    <img src={formData.avatar_url} alt="Avatar" className="w-full h-full rounded-full object-cover" onError={(e) => {
-                      console.error('Avatar image failed to load:', formData.avatar_url);
-                      e.target.style.display = 'none';
-                    }} />
+                    <img 
+                      key={avatarKey} // Force re-render when avatarKey changes
+                      src={formData.avatar_url} 
+                      alt="Avatar" 
+                      className="w-full h-full rounded-full object-cover" 
+                      onLoad={() => console.log('Avatar loaded successfully:', formData.avatar_url)}
+                      onError={(e) => {
+                        console.error('Avatar image failed to load:', formData.avatar_url);
+                        // Try fallback to user profile avatar
+                        if (user?.profile?.avatar_url && formData.avatar_url !== user?.profile?.avatar_url) {
+                          // Ensure fallback URL has full domain
+                          const fallbackUrl = user.profile.avatar_url.startsWith('http') 
+                            ? user.profile.avatar_url 
+                            : `http://localhost:8000${user.profile.avatar_url}`;
+                          e.target.src = fallbackUrl;
+                        } else {
+                          e.target.style.display = 'none';
+                        }
+                      }} 
+                    />
+                  ) : user?.profile?.avatar_url ? (
+                    <img 
+                      key={`fallback-${avatarKey}`} // Force re-render when avatarKey changes
+                      src={user.profile.avatar_url.startsWith('http') 
+                        ? user.profile.avatar_url 
+                        : `http://localhost:8000${user.profile.avatar_url}`} 
+                      alt="Avatar" 
+                      className="w-full h-full rounded-full object-cover" 
+                      onLoad={() => console.log('Fallback avatar loaded:', user.profile.avatar_url)}
+                      onError={(e) => {
+                        console.error('Fallback avatar failed to load:', user.profile.avatar_url);
+                        e.target.style.display = 'none';
+                      }} 
+                    />
                   ) : (
                     <User size={40} className="text-gray-400" />
                   )}
                 </div>
+                
+                {/* Always show change button when hovering or editing */}
+                <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <input
+                    type="file"
+                    id="avatar-upload"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    disabled={uploading}
+                  />
+                  <label
+                    htmlFor="avatar-upload"
+                    className="cursor-pointer text-white hover:text-blue-200 transition-colors"
+                    title="Change profile picture"
+                  >
+                    {uploading ? (
+                      <div className="animate-spin w-6 h-6 border-2 border-white border-t-transparent rounded-full" />
+                    ) : (
+                      <Camera size={24} />
+                    )}
+                  </label>
+                </div>
+                
+                {/* Show upload indicator when editing */}
                 {isEditing && (
-                  <div className="relative">
-                    <input
-                      type="file"
-                      id="avatar-upload"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                      disabled={uploading}
-                    />
-                    <label
-                      htmlFor="avatar-upload"
-                      className="absolute bottom-0 right-0 bg-blue-600 text-white p-1 rounded-full cursor-pointer hover:bg-blue-700 transition-colors"
-                    >
-                      {uploading ? (
-                        <div className="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-full" />
-                      ) : (
-                        <Upload size={14} />
-                      )}
-                    </label>
+                  <div className="absolute -bottom-1 -right-1 bg-blue-600 text-white p-1 rounded-full">
+                    <Camera size={12} />
                   </div>
                 )}
               </div>
@@ -259,35 +309,77 @@ const Profile = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Profile Image</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Profile Picture</label>
                 <div className="flex items-center gap-4">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                    id="profile-image-upload"
-                    disabled={uploading}
-                  />
-                  <label
-                    htmlFor="profile-image-upload"
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer transition-colors"
-                  >
-                    {uploading ? (
-                      <>
-                        <div className="animate-spin w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full" />
-                        <span>Uploading...</span>
-                      </>
+                  <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
+                    {formData.avatar_url ? (
+                      <img 
+                        key={avatarKey} // Force re-render when avatarKey changes
+                        src={formData.avatar_url} 
+                        alt="Avatar preview" 
+                        className="w-full h-full rounded-full object-cover" 
+                        onLoad={() => console.log('Preview avatar loaded:', formData.avatar_url)}
+                        onError={(e) => {
+                          console.error('Preview avatar failed to load:', formData.avatar_url);
+                          // Try fallback to user profile avatar
+                          if (user?.profile?.avatar_url && formData.avatar_url !== user?.profile?.avatar_url) {
+                            // Ensure fallback URL has full domain
+                            const fallbackUrl = user.profile.avatar_url.startsWith('http') 
+                              ? user.profile.avatar_url 
+                              : `http://localhost:8000${user.profile.avatar_url}`;
+                            e.target.src = fallbackUrl;
+                          } else {
+                            e.target.style.display = 'none';
+                          }
+                        }}
+                      />
+                    ) : user?.profile?.avatar_url ? (
+                      <img 
+                        key={`preview-fallback-${avatarKey}`} // Force re-render when avatarKey changes
+                        src={user.profile.avatar_url.startsWith('http') 
+                          ? user.profile.avatar_url 
+                          : `http://localhost:8000${user.profile.avatar_url}`} 
+                        alt="Avatar preview" 
+                        className="w-full h-full rounded-full object-cover" 
+                        onLoad={() => console.log('Preview fallback loaded:', user.profile.avatar_url)}
+                        onError={(e) => {
+                          console.error('Preview fallback failed:', user.profile.avatar_url);
+                          e.target.style.display = 'none';
+                        }}
+                      />
                     ) : (
-                      <>
-                        <Upload size={18} />
-                        <span>Upload Image</span>
-                      </>
+                      <User size={32} className="text-gray-400" />
                     )}
-                  </label>
-                  {formData.avatar_url && (
-                    <span className="text-sm text-green-600">Image uploaded</span>
-                  )}
+                  </div>
+                  <div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      id="profile-image-upload"
+                      disabled={uploading}
+                    />
+                    <label
+                      htmlFor="profile-image-upload"
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors"
+                    >
+                      {uploading ? (
+                        <>
+                          <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                          <span>Uploading...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Camera size={18} />
+                          <span>Change Picture</span>
+                        </>
+                      )}
+                    </label>
+                    <p className="text-xs text-gray-500 mt-1">
+                      JPG, PNG or GIF (max 5MB)
+                    </p>
+                  </div>
                 </div>
               </div>
               <div>
