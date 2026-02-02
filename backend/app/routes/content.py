@@ -209,7 +209,7 @@ def create_content(
         tags=content.tags,
         author_id=current_user.id,
         category_id=content.category_id,
-        status=ContentStatusEnum.DRAFT
+        status=ContentStatusEnum.REVIEW
     )
     
     db.add(db_content)

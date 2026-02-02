@@ -442,9 +442,6 @@ const TechWriterDashboard = () => {
                             <h3 className="font-medium">{category.name}</h3>
                           </div>
                           <p className="text-gray-600 text-sm">{category.description}</p>
-                          <p className="text-xs text-gray-500 mt-2">
-                            {category.content?.length || 0} items
-                          </p>
                         </div>
                       </div>
                     </div>

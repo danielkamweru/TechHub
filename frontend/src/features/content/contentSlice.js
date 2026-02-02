@@ -10,15 +10,18 @@ export const fetchContent = createAsyncThunk(
     if (search) params.append('search', search)
     if (status !== null) params.append('status', status)
     
-    // Try public endpoint first, fallback to authenticated endpoint
-    try {
-      const response = await api.get(`/content/public?${params}`)
-      console.log('Raw API response (public):', response.data)
-      return response.data
-    } catch (error) {
-      // If public endpoint fails, try authenticated endpoint
+    // Check if user is authenticated
+    const token = localStorage.getItem('token')
+    
+    if (token) {
+      // Authenticated user - use full content endpoint (admins see all, users see published)
       const response = await api.get(`/content/?${params}`)
       console.log('Raw API response (auth):', response.data)
+      return response.data
+    } else {
+      // Unauthenticated user - use public endpoint (only published content)
+      const response = await api.get(`/content/public?${params}`)
+      console.log('Raw API response (public):', response.data)
       return response.data
     }
   }
