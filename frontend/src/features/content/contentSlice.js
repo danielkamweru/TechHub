@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import api from '../../services/api'
+import toast from 'react-hot-toast'
 
 export const fetchContent = createAsyncThunk(
   'content/fetchContent',
@@ -9,9 +10,17 @@ export const fetchContent = createAsyncThunk(
     if (search) params.append('search', search)
     if (status !== null) params.append('status', status)
     
-    const response = await api.get(`/content/?${params}`)
-    console.log('Raw API response:', response.data)
-    return response.data
+    // Try public endpoint first, fallback to authenticated endpoint
+    try {
+      const response = await api.get(`/content/public?${params}`)
+      console.log('Raw API response (public):', response.data)
+      return response.data
+    } catch (error) {
+      // If public endpoint fails, try authenticated endpoint
+      const response = await api.get(`/content/?${params}`)
+      console.log('Raw API response (auth):', response.data)
+      return response.data
+    }
   }
 )
 
@@ -25,9 +34,17 @@ export const fetchContentById = createAsyncThunk(
 
 export const createContent = createAsyncThunk(
   'content/createContent',
-  async (contentData) => {
-    const response = await api.post('/content', contentData)
-    return response.data
+  async (contentData, { rejectWithValue }) => {
+    try {
+      const response = await api.post('/content', contentData)
+      toast.success('Content created successfully! It is now pending admin approval.')
+      return response.data
+    } catch (error) {
+      console.error('Create content error:', error.response?.data)
+      const errorMessage = error.response?.data?.detail || 'Failed to create content'
+      toast.error(errorMessage)
+      return rejectWithValue(errorMessage)
+    }
   }
 )
 
@@ -105,16 +122,28 @@ export const saveToWishlist = createAsyncThunk(
 export const approveContent = createAsyncThunk(
   'content/approveContent',
   async (id) => {
-    const response = await api.put(`/content/${id}/approve`)
-    return response.data
+    try {
+      const response = await api.put(`/content/${id}/approve`)
+      toast.success('Content approved and published!')
+      return response.data
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to approve content')
+      throw error
+    }
   }
 )
 
 export const rejectContent = createAsyncThunk(
   'content/rejectContent',
   async (id) => {
-    const response = await api.put(`/content/${id}/reject`)
-    return response.data
+    try {
+      const response = await api.put(`/content/${id}/reject`)
+      toast.success('Content rejected')
+      return response.data
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to reject content')
+      throw error
+    }
   }
 )
 

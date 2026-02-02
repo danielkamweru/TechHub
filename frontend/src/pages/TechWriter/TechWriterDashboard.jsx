@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
+import { useNavigate } from 'react-router-dom'
 import { PenTool, Plus, FileText, BarChart3, CheckCircle, XCircle, Eye, Flag, Clock, Users, TrendingUp, Edit, Save, X, Folder } from 'lucide-react'
 import { fetchContent, createContent, updateContent, approveContent, rejectContent, flagContent } from '../../features/content/contentSlice'
 import { fetchCategories, createCategory } from '../../features/categories/categoriesSlice'
 
 const TechWriterDashboard = () => {
   const dispatch = useDispatch()
+  const navigate = useNavigate()
   const { items: content } = useSelector((state) => state.content)
   const { items: categories } = useSelector((state) => state.categories)
   const [showCreateForm, setShowCreateForm] = useState(false)
@@ -23,12 +25,27 @@ const TechWriterDashboard = () => {
   })
 
   useEffect(() => {
+    // Check if user is authenticated
+    const token = localStorage.getItem('token')
+    if (!token) {
+      navigate('/login')
+      return
+    }
+    
     dispatch(fetchContent())
     dispatch(fetchCategories())
-  }, [dispatch])
+  }, [dispatch, navigate])
 
   const handleCreateContent = async (e) => {
     e.preventDefault()
+    
+    // Check if user is authenticated
+    const token = localStorage.getItem('token')
+    if (!token) {
+      alert('You must be logged in to create content. Please log in first.')
+      return
+    }
+    
     try {
       await dispatch(createContent(newContent)).unwrap()
       setNewContent({
@@ -43,6 +60,12 @@ const TechWriterDashboard = () => {
       dispatch(fetchContent())
     } catch (error) {
       console.error('Failed to create content:', error)
+      // Show more detailed error message
+      if (typeof error === 'string') {
+        alert(`Error: ${error}`)
+      } else {
+        alert('Failed to create content. Please check your authentication and try again.')
+      }
     }
   }
 
@@ -60,6 +83,14 @@ const TechWriterDashboard = () => {
 
   const handleUpdateContent = async (e) => {
     e.preventDefault()
+    
+    // Check if user is authenticated
+    const token = localStorage.getItem('token')
+    if (!token) {
+      alert('You must be logged in to update content. Please log in first.')
+      return
+    }
+    
     try {
       await dispatch(updateContent({ id: editingContent.id, ...newContent })).unwrap()
       setEditingContent(null)
@@ -74,6 +105,7 @@ const TechWriterDashboard = () => {
       dispatch(fetchContent())
     } catch (error) {
       console.error('Failed to update content:', error)
+      alert('Failed to update content. Please check your authentication and try again.')
     }
   }
 
