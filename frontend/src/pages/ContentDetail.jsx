@@ -585,7 +585,7 @@ const ContentDetail = () => {
               </div>
               <div className="text-center mb-8">
                 <h3 className="text-3xl font-bold mb-4">{currentContent.title}</h3>
-                <p className="opacity-90 text-lg mb-6">{currentContent.content_text}</p>
+                <p className="opacity-90 text-lg mb-6">Learn about this podcast episode and listen to the full audio below</p>
                 
                 {/* Podcast Thumbnail */}
                 {currentContent.thumbnail_url && (
@@ -653,7 +653,7 @@ const ContentDetail = () => {
                 </span>
               </div>
               <h3 className="text-3xl font-bold mb-4">{currentContent.title}</h3>
-              <p className="opacity-90 text-lg">{currentContent.content_text}</p>
+              <p className="opacity-90 text-lg mb-4">Read the complete article below</p>
             </div>
             
             {/* Article Content */}
@@ -742,8 +742,12 @@ const ContentDetail = () => {
                     </span>
                   )}
                 </div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-3">{currentContent.title}</h1>
-                <p className="text-gray-700 text-lg mb-4">{currentContent.content_text}</p>
+                {currentContent.content_type !== 'article' && (
+                  <>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-3">{currentContent.title}</h1>
+                    <p className="text-gray-700 text-lg mb-4">{currentContent.content_text.substring(0, 200)}...</p>
+                  </>
+                )}
               </div>
             </div>
 
