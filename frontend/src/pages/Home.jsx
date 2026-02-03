@@ -1,9 +1,8 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { Link } from 'react-router-dom'
-import { Search, Sparkles } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 
 const Home = () => {
-  const [searchTerm, setSearchTerm] = useState('')
 
   return (
     <div className="min-h-screen">
@@ -40,7 +39,7 @@ const Home = () => {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none rounded-xl" />
                 <div className="absolute bottom-4 left-4 text-white">
                   <div className="bg-black/60 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium">
-                    🚀 Start Your Cloud Journey
+                    
                   </div>
                 </div>
               </div>
@@ -59,21 +58,6 @@ const Home = () => {
             <p className="mt-4 text-white/80 text-sm">
               Join thousands of tech enthusiasts sharing knowledge
             </p>
-          </div>
-          
-          {/* Search Bar */}
-          <div className="max-w-2xl mx-auto relative group">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-400 rounded-2xl blur opacity-75 group-hover:opacity-100 transition-opacity" />
-            <div className="relative glass p-2 rounded-2xl">
-              <Search className="absolute left-6 top-1/2 transform -translate-y-1/2 text-gray-400" size={24} />
-              <input
-                type="text"
-                placeholder="Search for articles, videos, podcasts..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-14 pr-6 py-4 bg-white/90 backdrop-blur-sm rounded-xl text-gray-900 text-lg focus:ring-2 focus:ring-blue-400 focus:outline-none transition-all"
-              />
-            </div>
           </div>
         </div>
       </div>
@@ -99,7 +83,7 @@ const Home = () => {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none rounded-xl" />
                 <div className="absolute bottom-4 left-4 text-white">
                   <div className="bg-black/60 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium">
-                    💻 FreeCodeCamp • 11:45:21
+                    
                   </div>
                 </div>
               </div>

@@ -16,10 +16,17 @@ export const updateCategory = createAsyncThunk('categories/updateCategory', asyn
   return response.data
 })
 
-export const deleteCategory = createAsyncThunk('categories/deleteCategory', async (id) => {
-  await api.delete(`/categories/${id}`)
-  return id
-})
+export const deleteCategory = createAsyncThunk(
+  'categories/deleteCategory', 
+  async (id, { rejectWithValue }) => {
+    try {
+      await api.delete(`/categories/${id}`)
+      return id
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.detail || error.response?.data?.message || 'Failed to delete category')
+    }
+  }
+)
 
 export const subscribeToCategory = createAsyncThunk('categories/subscribeToCategory', async (categoryId) => {
   const response = await api.post(`/categories/${categoryId}/subscribe`)

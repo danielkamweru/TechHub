@@ -110,6 +110,11 @@ const AdminDashboard = () => {
     }
   }
 
+  const getCategoryContentCount = (categoryId) => {
+    const category = categories.find(cat => cat.id === categoryId)
+    return category?.content?.length || 0
+  }
+
   const handleDeleteCategory = async (categoryId) => {
     try {
       await dispatch(deleteCategory(categoryId)).unwrap()
@@ -118,7 +123,13 @@ const AdminDashboard = () => {
       toast.success('Category deleted successfully!')
     } catch (error) {
       console.error('Failed to delete category:', error)
-      toast.error('Failed to delete category')
+      const errorMessage = error?.message || error?.detail || error || 'Failed to delete category'
+      
+      if (errorMessage.includes('existing content')) {
+        toast.error('This category contains content and cannot be deleted. Please move or delete the content first.')
+      } else {
+        toast.error(errorMessage)
+      }
     }
   }
 
@@ -522,6 +533,11 @@ const AdminDashboard = () => {
                               style={{ backgroundColor: category.color }}
                             ></div>
                             <h3 className="font-medium">{category.name}</h3>
+                            {(category.content?.length || 0) > 0 && (
+                              <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">
+                                Has Content
+                              </span>
+                            )}
                           </div>
                           <p className="text-gray-600 text-sm">{category.description}</p>
                           <p className="text-xs text-gray-500 mt-2">
@@ -538,8 +554,17 @@ const AdminDashboard = () => {
                           </button>
                           <button 
                             onClick={() => setShowDeleteConfirm(category.id)}
-                            className="text-red-600 hover:bg-red-50 p-1 rounded"
-                            title="Delete category"
+                            className={`p-1 rounded ${
+                              (category.content?.length || 0) > 0
+                                ? 'text-gray-400 cursor-not-allowed'
+                                : 'text-red-600 hover:bg-red-50'
+                            }`}
+                            title={
+                              (category.content?.length || 0) > 0
+                                ? 'Cannot delete category with content'
+                                : 'Delete category'
+                            }
+                            disabled={(category.content?.length || 0) > 0}
                           >
                             <Trash2 size={16} />
                           </button>
@@ -793,20 +818,37 @@ const AdminDashboard = () => {
         {/* Delete Confirmation Modal */}
         {showDeleteConfirm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-sm">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
                   <Trash2 size={20} className="text-red-600" />
                 </div>
                 <h2 className="text-xl font-bold">Delete Category</h2>
               </div>
-              <p className="text-gray-600 mb-6">
-                Are you sure you want to delete this category? This action cannot be undone and may affect content associated with this category.
-              </p>
+              <div className="mb-6">
+                <p className="text-gray-600 mb-3">
+                  Are you sure you want to delete this category? This action cannot be undone.
+                </p>
+                {getCategoryContentCount(showDeleteConfirm) > 0 && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <p className="text-yellow-800 text-sm font-medium">
+                      ⚠️ This category contains {getCategoryContentCount(showDeleteConfirm)} content item(s)
+                    </p>
+                    <p className="text-yellow-700 text-xs mt-1">
+                      Please move or delete the content first before deleting this category.
+                    </p>
+                  </div>
+                )}
+              </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => handleDeleteCategory(showDeleteConfirm)}
-                  className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+                  className={`flex-1 px-4 py-2 rounded-lg ${
+                    getCategoryContentCount(showDeleteConfirm) > 0
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-red-600 text-white hover:bg-red-700'
+                  }`}
+                  disabled={getCategoryContentCount(showDeleteConfirm) > 0}
                 >
                   Delete
                 </button>

@@ -35,7 +35,7 @@ function App() {
   }, [isAuthenticated, dispatch])
 
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <div className="min-h-screen bg-gray-50">
         {/* Desktop Navigation */}
         <div className="hidden lg:block">
