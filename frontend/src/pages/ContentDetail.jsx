@@ -534,15 +534,6 @@ const ContentDetail = () => {
     }
   }
 
-  const handleCopyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href)
-      setShareCopied(true)
-      setTimeout(() => setShareCopied(false), 2000)
-    } catch (e) {
-      console.error('Copy failed', e)
-    }
-  }
 
   // Extract YouTube video ID from URL
   const getYouTubeVideoId = (url) => {
@@ -690,16 +681,6 @@ const ContentDetail = () => {
             
             {/* Article Actions */}
             <div className="flex flex-wrap gap-3 pt-6 border-t border-gray-200">
-              <button
-                onClick={() => navigator.share && navigator.share({
-                  title: currentContent.title,
-                  url: window.location.href
-                })}
-                className="inline-flex items-center gap-2 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
-              >
-                <Share2 size={16} />
-                Share
-              </button>
             </div>
           </div>
         )
@@ -829,21 +810,14 @@ const ContentDetail = () => {
                     <span className="ml-1 hidden sm:inline">{isSubscribed ? 'Subscribed' : 'Subscribe'}</span>
                   </button>
                 )}
-                {/* Share & Copy link */}
-                <div className="relative flex items-center gap-1">
+                {/* Share */}
+                <div className="relative">
                   <button
                     onClick={handleShare}
                     className="p-2 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors"
                     title="Share"
                   >
                     <Share2 size={20} />
-                  </button>
-                  <button
-                    onClick={handleCopyLink}
-                    className="p-2 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors text-xs font-medium"
-                    title="Share"
-                  >
-                    Share
                   </button>
                   {shareCopied && (
                     <span className="absolute -top-8 right-0 bg-gray-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
