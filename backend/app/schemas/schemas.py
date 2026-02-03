@@ -148,6 +148,7 @@ class ContentBase(BaseModel):
     media_url: Optional[str] = None
     thumbnail_url: Optional[str] = None
     tags: Optional[str] = None
+    subtitle: Optional[str] = None
 
 
 class ContentCreate(ContentBase):
@@ -161,6 +162,7 @@ class ContentUpdate(BaseModel):
     thumbnail_url: Optional[str] = None
     tags: Optional[str] = None
     category_id: Optional[int] = None
+    subtitle: Optional[str] = None
 
 
 class ContentResponse(ContentBase):

@@ -89,6 +89,12 @@ const authSlice = createSlice({
         state.user = action.payload.user
         state.token = action.payload.token
         state.isAuthenticated = true
+        // Ensure avatar_url is properly set from profile if available
+        if (action.payload.user?.profile?.avatar_url && !action.payload.user.avatar_url) {
+          state.user.avatar_url = action.payload.user.profile.avatar_url.startsWith('http')
+            ? action.payload.user.profile.avatar_url
+            : `http://localhost:8000${action.payload.user.profile.avatar_url}`
+        }
       })
       .addCase(login.rejected, (state, action) => {
         state.loading = false
@@ -103,6 +109,12 @@ const authSlice = createSlice({
         state.user = action.payload.user
         state.token = action.payload.token
         state.isAuthenticated = true
+        // Ensure avatar_url is properly set from profile if available
+        if (action.payload.user?.profile?.avatar_url && !action.payload.user.avatar_url) {
+          state.user.avatar_url = action.payload.user.profile.avatar_url.startsWith('http')
+            ? action.payload.user.profile.avatar_url
+            : `http://localhost:8000${action.payload.user.profile.avatar_url}`
+        }
       })
       .addCase(register.rejected, (state, action) => {
         state.loading = false
@@ -117,6 +129,12 @@ const authSlice = createSlice({
         state.token = action.payload.token
         state.isAuthenticated = true
         state.error = null
+        // Ensure avatar_url is properly set from profile if available
+        if (action.payload.user?.profile?.avatar_url && !action.payload.user.avatar_url) {
+          state.user.avatar_url = action.payload.user.profile.avatar_url.startsWith('http')
+            ? action.payload.user.profile.avatar_url
+            : `http://localhost:8000${action.payload.user.profile.avatar_url}`
+        }
       })
       .addCase(checkAuth.rejected, (state) => {
         state.loading = false
@@ -126,6 +144,12 @@ const authSlice = createSlice({
       })
       .addCase(updateUserProfile.fulfilled, (state, action) => {
         state.user = action.payload
+        // Ensure avatar_url is properly set from profile if available
+        if (action.payload?.profile?.avatar_url && !action.payload.avatar_url) {
+          state.user.avatar_url = action.payload.profile.avatar_url.startsWith('http')
+            ? action.payload.profile.avatar_url
+            : `http://localhost:8000${action.payload.profile.avatar_url}`
+        }
       })
   },
 })

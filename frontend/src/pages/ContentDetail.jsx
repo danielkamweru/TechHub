@@ -513,22 +513,23 @@ const ContentDetail = () => {
   const handleShare = async () => {
     const url = window.location.href
     try {
+      // Always copy to clipboard first
+      await navigator.clipboard.writeText(url)
+      setShareCopied(true)
+      setTimeout(() => setShareCopied(false), 2000)
+      
+      // Try native share API if available (but don't wait for it)
       if (navigator.share) {
         await navigator.share({
           title: currentContent.title,
           text: currentContent.content_text,
           url
         })
-      } else {
-        await navigator.clipboard.writeText(url)
-        setShareCopied(true)
-        setTimeout(() => setShareCopied(false), 2000)
       }
     } catch (err) {
       if (err.name !== 'AbortError') {
-        await navigator.clipboard.writeText(url)
-        setShareCopied(true)
-        setTimeout(() => setShareCopied(false), 2000)
+        // Share was cancelled or failed, but link is already copied
+        console.log('Share cancelled or failed:', err)
       }
     }
   }
@@ -679,162 +680,26 @@ const ContentDetail = () => {
                 </div>
               )}
               
-              {/* Smart Article Reader */}
-              <div className="bg-gray-50 rounded-lg p-6 mb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="font-semibold text-gray-800">Article Reader</h4>
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <Eye size={16} />
-                    <span>{currentContent.views_count || 0} views</span>
-                  </div>
+              {/* Display article content directly */}
+              <div className="prose max-w-none">
+                <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                  {currentContent.content_text}
                 </div>
-                
-                {currentContent.media_url ? (
-                  <div className="space-y-4">
-                    {/* Check if it's a URL that can be embedded */}
-                    {(currentContent.media_url.includes('blog.logrocket.com') || 
-                      currentContent.media_url.includes('medium.com') ||
-                      currentContent.media_url.includes('dev.to') ||
-                      currentContent.media_url.includes('freecodecamp.org')) ? (
-                      <div className="space-y-4">
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                          <p className="text-blue-800 text-sm mb-3">
-                            <BookOpen size={16} className="inline mr-2" />
-                            Reading article directly in TechHub:
-                          </p>
-                        </div>
-                        
-                        {/* Embedded Article Reader */}
-                        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                          <iframe
-                            src={currentContent.media_url}
-                            className="w-full h-96 border-0"
-                            title={`${currentContent.title} - Article Reader`}
-                            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"
-                            onError={(e) => {
-                              console.log('Article iframe failed, showing fallback')
-                              e.target.style.display = 'none'
-                              document.getElementById('article-fallback').style.display = 'block'
-                            }}
-                          />
-                        </div>
-                        
-                        {/* Article Controls */}
-                        <div className="flex items-center justify-between bg-white rounded-lg border border-gray-200 p-4">
-                          <div className="flex items-center gap-3">
-                            <button
-                              onClick={() => {
-                                const iframe = document.querySelector('iframe')
-                                if (iframe && iframe.contentWindow) {
-                                  iframe.contentWindow.scrollBy(0, -200)
-                                }
-                              }}
-                              className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
-                              title="Scroll up"
-                            >
-                              ↑
-                            </button>
-                            <button
-                              onClick={() => {
-                                const iframe = document.querySelector('iframe')
-                                if (iframe && iframe.contentWindow) {
-                                  iframe.contentWindow.scrollBy(0, 200)
-                                }
-                              }}
-                              className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
-                              title="Scroll down"
-                            >
-                              ↓
-                            </button>
-                          </div>
-                          <span className="text-sm text-gray-500">Use arrows to scroll</span>
-                          <button
-                            onClick={() => {
-                              const iframe = document.querySelector('iframe')
-                              if (iframe && iframe.contentWindow) {
-                                iframe.contentWindow.scrollTo(0, 0)
-                              }
-                            }}
-                            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                          >
-                            Reset Position
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <p className="text-blue-800 mb-3">
-                          <BookOpen size={20} className="inline mr-2" />
-                          This article is available at the source website
-                        </p>
-                        <div className="flex flex-wrap gap-3">
-                          <a
-                            href={currentContent.media_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-                          >
-                            <Play size={16} />
-                            Read Full Article
-                          </a>
-                          <button
-                            onClick={() => window.open(currentContent.media_url, '_blank')}
-                            className="inline-flex items-center gap-2 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
-                          >
-                            <Share2 size={16} />
-                            Share
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Fallback content */}
-                    <div id="article-fallback" style={{display: 'none'}}>
-                      <div className="text-gray-600 leading-relaxed">
-                        <p className="mb-4">
-                          To read this article, please visit the original source:
-                        </p>
-                        <a
-                          href={currentContent.media_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-700 font-semibold underline"
-                        >
-                          {currentContent.media_url}
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-gray-500 text-center py-8">
-                    <BookOpen size={48} className="mx-auto mb-4 opacity-50" />
-                    <p>No article URL available</p>
-                  </div>
-                )}
               </div>
-              
-              {/* Article Actions */}
-              <div className="flex flex-wrap gap-3 pt-6 border-t border-gray-200">
-                <a
-                  href={currentContent.media_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-                >
-                  <BookOpen size={16} />
-                  Read Original
-                </a>
-                <button
-                  onClick={() => navigator.share && navigator.share({
-                    title: currentContent.title,
-                    url: currentContent.media_url
-                  })}
-                  className="inline-flex items-center gap-2 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
-                >
-                  <Share2 size={16} />
-                  Share
-                </button>
-              </div>
+            </div>
+            
+            {/* Article Actions */}
+            <div className="flex flex-wrap gap-3 pt-6 border-t border-gray-200">
+              <button
+                onClick={() => navigator.share && navigator.share({
+                  title: currentContent.title,
+                  url: window.location.href
+                })}
+                className="inline-flex items-center gap-2 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+              >
+                <Share2 size={16} />
+                Share
+              </button>
             </div>
           </div>
         )
@@ -976,13 +841,13 @@ const ContentDetail = () => {
                   <button
                     onClick={handleCopyLink}
                     className="p-2 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors text-xs font-medium"
-                    title="Copy link"
+                    title="Share"
                   >
-                    Copy link
+                    Share
                   </button>
                   {shareCopied && (
                     <span className="absolute -top-8 right-0 bg-gray-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
-                      Link copied!
+                      Link copied! Now share it
                     </span>
                   )}
                 </div>

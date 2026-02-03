@@ -17,6 +17,7 @@ const TechWriterDashboard = () => {
   const [newCategory, setNewCategory] = useState({ name: '', description: '', color: '#3B82F6' })
   const [newContent, setNewContent] = useState({
     title: '',
+    subtitle: '',
     content_text: '',
     content_type: 'article',
     media_url: '',
@@ -50,6 +51,7 @@ const TechWriterDashboard = () => {
       await dispatch(createContent(newContent)).unwrap()
       setNewContent({
         title: '',
+        subtitle: '',
         content_text: '',
         content_type: 'article',
         media_url: '',
@@ -73,6 +75,7 @@ const TechWriterDashboard = () => {
     setEditingContent(contentItem)
     setNewContent({
       title: contentItem.title,
+      subtitle: contentItem.subtitle || '',
       content_text: contentItem.content_text,
       content_type: contentItem.content_type,
       media_url: contentItem.media_url || '',
@@ -96,6 +99,7 @@ const TechWriterDashboard = () => {
       setEditingContent(null)
       setNewContent({
         title: '',
+        subtitle: '',
         content_text: '',
         content_type: 'article',
         media_url: '',
@@ -113,6 +117,7 @@ const TechWriterDashboard = () => {
     setEditingContent(null)
     setNewContent({
       title: '',
+      subtitle: '',
       content_text: '',
       content_type: 'article',
       media_url: '',
@@ -136,6 +141,7 @@ const TechWriterDashboard = () => {
   const handleApproveContent = async (contentId) => {
     try {
       await dispatch(approveContent(contentId)).unwrap()
+      // Refresh content list to show updated order
       dispatch(fetchContent())
     } catch (error) {
       console.error('Failed to approve content:', error)
@@ -525,6 +531,13 @@ const TechWriterDashboard = () => {
                   onChange={(e) => setNewContent({...newContent, title: e.target.value})}
                   className="w-full p-3 border rounded-lg"
                   required
+                />
+                <input
+                  type="text"
+                  placeholder="Subtitle (optional)"
+                  value={newContent.subtitle}
+                  onChange={(e) => setNewContent({...newContent, subtitle: e.target.value})}
+                  className="w-full p-3 border rounded-lg"
                 />
                 <textarea
                   placeholder="Description"

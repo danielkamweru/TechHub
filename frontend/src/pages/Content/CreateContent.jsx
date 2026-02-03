@@ -5,6 +5,7 @@ const CreateContent = () => {
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
     title: '',
+    subtitle: '',
     description: '',
     content_type: 'article',
     body: ''
@@ -27,6 +28,13 @@ const CreateContent = () => {
           onChange={(e) => setFormData({...formData, title: e.target.value})}
           className="w-full p-3 border rounded-lg"
           required
+        />
+        <input
+          type="text"
+          placeholder="Subtitle (optional)"
+          value={formData.subtitle}
+          onChange={(e) => setFormData({...formData, subtitle: e.target.value})}
+          className="w-full p-3 border rounded-lg"
         />
         <textarea
           placeholder="Description"

@@ -30,6 +30,9 @@ def get_public_content(
         query = query.filter(Content.status == ContentStatusEnum.PUBLISHED)
         query = query.filter(Content.is_flagged == False)
         
+        # Sort by published_at (newest approved content first)
+        query = query.order_by(desc(Content.published_at), desc(Content.created_at))
+        
         # Get content with relationships loaded
         content_list = query.options(
             joinedload(Content.author),
@@ -121,6 +124,19 @@ def get_content(
         if current_user.role != RoleEnum.ADMIN:
             query = query.filter(Content.is_flagged == False)
         # Admin sees ALL content regardless of status or flag
+        
+        # Sort content: approved content first, then by published_at (newest first)
+        if current_user.role == RoleEnum.ADMIN:
+            # Admin sees all content, with approved/published at top
+            query = query.order_by(
+                desc(Content.status == ContentStatusEnum.PUBLISHED),
+                desc(Content.status == ContentStatusEnum.APPROVED),
+                desc(Content.published_at),
+                desc(Content.created_at)
+            )
+        else:
+            # Regular users see published content, sorted by published_at (newest approved content first)
+            query = query.order_by(desc(Content.published_at), desc(Content.created_at))
         
         # Get content with relationships loaded
         content_list = query.options(
@@ -588,7 +604,7 @@ def approve_content(
     # Notify content author about approval
     author_notification = Notification(
         user_id=content.author_id,
-        notification_type=NotificationTypeEnum.SYSTEM,
+        notification_type=NotificationTypeEnum.STATUS_CHANGE,
         title="Content Approved!",
         message=f"Your content '{content.title}' has been approved and is now published. Users can now see it in the explore section.",
         related_content_id=content.id
@@ -603,7 +619,7 @@ def approve_content(
                 if subscriber.id != content.author_id:
                     notification = Notification(
                         user_id=subscriber.id,
-                        notification_type=NotificationTypeEnum.SYSTEM,
+                        notification_type=NotificationTypeEnum.STATUS_CHANGE,
                         title=f"New content in {category.name}",
                         message=f"\"{content.title}\" was just published.",
                         related_content_id=content.id
@@ -632,7 +648,7 @@ def reject_content(
     # Notify content author about rejection
     author_notification = Notification(
         user_id=content.author_id,
-        notification_type=NotificationTypeEnum.SYSTEM,
+        notification_type=NotificationTypeEnum.STATUS_CHANGE,
         title="Content Rejected",
         message=f"Your content '{content.title}' has been rejected. Please review the content guidelines and try again.",
         related_content_id=content.id

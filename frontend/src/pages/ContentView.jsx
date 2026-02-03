@@ -164,7 +164,7 @@ const ContentView = () => {
             )}
             
             <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-              {content.body || content.description}
+              {content.content_text || content.body || content.description}
             </div>
           </div>
         </div>

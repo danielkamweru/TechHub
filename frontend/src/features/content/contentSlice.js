@@ -388,6 +388,30 @@ const contentSlice = createSlice({
           state.currentContent.is_flagged = false
         }
       })
+      .addCase(approveContent.fulfilled, (state, action) => {
+        // Find the approved content and update its status
+        const contentId = parseInt(action.meta.arg)
+        const item = state.items.find(i => i.id === contentId)
+        if (item) {
+          item.status = 'published'
+          item.published_at = new Date().toISOString()
+          // Move approved content to the top
+          state.items = [item, ...state.items.filter(i => i.id !== contentId)]
+        }
+        // Refresh the content list to get updated order
+        if (state.items.length > 0) {
+          // This will trigger a refetch of content
+          state.loading = true
+        }
+      })
+      .addCase(rejectContent.fulfilled, (state, action) => {
+        // Find the rejected content and update its status
+        const contentId = parseInt(action.meta.arg)
+        const item = state.items.find(i => i.id === contentId)
+        if (item) {
+          item.status = 'rejected'
+        }
+      })
   },
 })
 

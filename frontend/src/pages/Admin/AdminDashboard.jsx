@@ -390,6 +390,15 @@ const AdminDashboard = () => {
                           // Published content first, then unpublished at bottom
                           if (a.status === 'published' && b.status !== 'published') return -1
                           if (a.status !== 'published' && b.status === 'published') return 1
+                          
+                          // For published content, sort by published_at (most recently approved first)
+                          if (a.status === 'published' && b.status === 'published') {
+                            const aDate = a.published_at ? new Date(a.published_at) : new Date(0)
+                            const bDate = b.published_at ? new Date(b.published_at) : new Date(0)
+                            return bDate - aDate // Descending order (newest first)
+                          }
+                          
+                          // For unpublished content, sort by ID
                           return a.id - b.id
                         })
                         .map((item) => (

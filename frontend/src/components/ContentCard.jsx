@@ -33,25 +33,46 @@ const ContentCard = ({ content, compact = false, onLike, onSaveToWishlist, showA
     }
   }
 
+  const [shareCopied, setShareCopied] = useState(false)
+
   const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: content.title,
-          text: content.description || `Check out this ${content.content_type} on TechHub`,
-          url: `${window.location.origin}/content/${content.id}`
-        })
-      } catch (error) {
-        console.log('Error sharing:', error)
+    const url = `${window.location.origin}/content/${content.id}`
+    
+    try {
+      // Always copy to clipboard first
+      await navigator.clipboard.writeText(url)
+      setShareCopied(true)
+      setTimeout(() => setShareCopied(false), 2000)
+      
+      // Try native share API if available (but don't wait for it)
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: content.title,
+            text: content.description || `Check out this ${content.content_type} on TechHub`,
+            url
+          })
+        } catch (shareError) {
+          // Share was cancelled or failed, but link is already copied
+          console.log('Native share cancelled or failed:', shareError)
+        }
       }
-    } else {
-      // Fallback: Copy to clipboard
+    } catch (error) {
+      console.error('Failed to copy link:', error)
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea')
+      textArea.value = url
+      document.body.appendChild(textArea)
+      textArea.select()
       try {
-        await navigator.clipboard.writeText(`${window.location.origin}/content/${content.id}`)
-        alert('Link copied to clipboard!')
-      } catch (error) {
-        console.error('Failed to copy link:', error)
+        document.execCommand('copy')
+        setShareCopied(true)
+        setTimeout(() => setShareCopied(false), 2000)
+      } catch (fallbackError) {
+        console.error('Fallback copy failed:', fallbackError)
+        alert('Could not copy link. Please copy manually: ' + url)
       }
+      document.body.removeChild(textArea)
     }
   }
 
@@ -197,13 +218,20 @@ const ContentCard = ({ content, compact = false, onLike, onSaveToWishlist, showA
               >
                 <Bookmark size={16} fill={isInWishlist ? 'currentColor' : 'none'} />
               </button>
-              <button 
-                onClick={handleShare}
-                className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"
-                title="Share"
-              >
-                <Share2 size={16} />
-              </button>
+              <div className="relative">
+                <button 
+                  onClick={handleShare}
+                  className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"
+                  title="Share"
+                >
+                  <Share2 size={16} />
+                </button>
+                {shareCopied && (
+                  <span className="absolute -top-8 right-0 bg-gray-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
+                    Link copied! Now share it
+                  </span>
+                )}
+              </div>
               <button 
                 onClick={() => window.location.href = `/content/${content.id}#comments`}
                 className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"

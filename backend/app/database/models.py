@@ -107,6 +107,7 @@ class Content(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
+    subtitle = Column(String)  # Added subtitle field for blogs
     content_text = Column(Text)
     content_type = Column(Enum(ContentTypeEnum), nullable=False)
     status = Column(Enum(ContentStatusEnum), default=ContentStatusEnum.DRAFT)
@@ -173,7 +174,7 @@ class Notification(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
-    notification_type = Column(Enum(NotificationTypeEnum), default=NotificationTypeEnum.SYSTEM)
+    notification_type = Column(Enum(NotificationTypeEnum), default=NotificationTypeEnum.STATUS_CHANGE)
     title = Column(String, nullable=False)
     message = Column(Text, nullable=False)
     is_read = Column(Boolean, default=False)
