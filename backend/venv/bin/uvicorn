@@ -1,4 +1,4 @@
-#!/home/user/Development/code/phase-5/Moringa-TechHub/backend/venv/bin/python3
+#!/home/user/Development/code/phase-5/TechHub/backend/venv/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys
