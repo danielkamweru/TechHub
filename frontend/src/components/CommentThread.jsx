@@ -109,23 +109,17 @@ const CommentThread = ({ contentId, comments: commentsProp }) => {
         
         {replyTo === comment.id && (
           <form onSubmit={(e) => handleSubmitReply(e, comment.id)} className="mt-3">
-            <div className="relative">
-              <input
-                type="text"
-                value={replyTexts[comment.id] || ''}
-                onChange={(e) => {
-                  console.log('Comment ID:', comment.id, 'Reply text:', e.target.value)
-                  setReplyTexts(prev => ({ ...prev, [comment.id]: e.target.value }))
-                }}
-                placeholder="Write a reply..."
-                className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-primary-500 focus:border-transparent textarea-ltr"
-                style={{ minHeight: '100px' }}
-                autoFocus
-              />
-              <div className="absolute top-2 right-2 text-xs text-gray-400 bg-white px-2 py-1 rounded">
-                Debug: {replyTexts[comment.id] || 'empty'}
-              </div>
-            </div>
+            <textarea
+              value={replyTexts[comment.id] || ''}
+              onChange={(e) => {
+                setReplyTexts(prev => ({ ...prev, [comment.id]: e.target.value }))
+              }}
+              placeholder="Write a reply..."
+              className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-primary-500 focus:border-transparent textarea-ltr"
+              rows="4"
+              style={{ minHeight: '100px' }}
+              autoFocus
+            />
             <div className="flex gap-2 mt-2">
               <button type="submit" className="btn-primary text-sm">
                 Reply

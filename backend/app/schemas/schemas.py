@@ -4,6 +4,7 @@ from pydantic import (
     constr,
     field_validator,
     model_validator,
+    field_serializer,
 )
 from typing import Optional
 from datetime import datetime
@@ -178,6 +179,8 @@ class CommentResponse(CommentBase):
     content_id: int
     parent_id: Optional[int]
     author: UserResponse
+    likes_count: Optional[int] = 0
+    is_liked: Optional[bool] = False
 
     class Config:
         from_attributes = True
@@ -218,3 +221,10 @@ class NotificationResponse(BaseModel):
 
     class Config:
         from_attributes = True
+        
+    @field_validator('notification_type', mode='before')
+    @classmethod
+    def convert_enum_to_string(cls, v):
+        if hasattr(v, 'value'):
+            return v.value
+        return str(v) if v else None

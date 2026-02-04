@@ -139,6 +139,7 @@ def subscribe_to_category(
         
         # Notify category creator about new subscriber (if creator exists and is not the subscriber)
         if category.created_by and category.created_by != current_user.id:
+            print(f"Creating subscription notification for user {category.created_by} by user {current_user.id}")
             notification = Notification(
                 user_id=category.created_by,
                 notification_type=NotificationTypeEnum.FOLLOW,
@@ -148,6 +149,9 @@ def subscribe_to_category(
             )
             db.add(notification)
             db.commit()
+            print(f"Subscription notification created successfully")
+        else:
+            print(f"Subscription notification not created. category.created_by: {category.created_by}, current_user.id: {current_user.id}")
         
         return {"message": "Subscribed to category successfully"}
     

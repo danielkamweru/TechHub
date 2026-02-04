@@ -183,6 +183,10 @@ class Notification(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     user = relationship("User", back_populates="notifications")
+    
+    @property
+    def notification_type_str(self):
+        return self.notification_type.value if self.notification_type else None
 
 class ContentFlag(Base):
     __tablename__ = "content_flags"

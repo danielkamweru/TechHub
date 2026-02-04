@@ -707,6 +707,7 @@ def like_content(
     
     # Create notification for content author (only for likes, not dislikes, and not own content)
     if should_notify and content.author_id != current_user.id:
+        print(f"Creating like notification for user {content.author_id} by user {current_user.id}")
         notification = Notification(
             user_id=content.author_id,
             notification_type=NotificationTypeEnum.LIKE,
@@ -716,6 +717,9 @@ def like_content(
         )
         db.add(notification)
         db.commit()
+        print(f"Like notification created successfully")
+    else:
+        print(f"Like notification not created. should_notify: {should_notify}, author_id: {content.author_id}, current_user_id: {current_user.id}")
     
     # Return updated counts
     likes_count = db.query(Like).filter(Like.content_id == content_id, Like.is_like == True).count()

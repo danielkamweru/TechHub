@@ -8,13 +8,23 @@ from app.core.dependencies import get_current_user
 
 router = APIRouter()
 
-def build_comment_tree(comments: List[Comment]) -> List[dict]:
+def build_comment_tree(comments: List[Comment], db: Session, current_user: User = None) -> List[dict]:
     """Build nested comment structure"""
     comment_dict = {}
     root_comments = []
     
     # First pass: create comment objects
     for comment in comments:
+        # Get like count and check if current user liked this comment
+        likes_count = db.query(CommentLike).filter(CommentLike.comment_id == comment.id).count()
+        is_liked = False
+        if current_user:
+            user_like = db.query(CommentLike).filter(
+                CommentLike.comment_id == comment.id,
+                CommentLike.user_id == current_user.id
+            ).first()
+            is_liked = user_like is not None
+        
         comment_data = {
             "id": comment.id,
             "text": comment.text,
@@ -24,6 +34,8 @@ def build_comment_tree(comments: List[Comment]) -> List[dict]:
             "content_id": comment.content_id,
             "parent_id": comment.parent_id,
             "author": comment.author,
+            "likes_count": likes_count,
+            "is_liked": is_liked,
             "replies": []
         }
         comment_dict[comment.id] = comment_data
@@ -41,6 +53,7 @@ def build_comment_tree(comments: List[Comment]) -> List[dict]:
 @router.get("/content/{content_id}")
 def get_content_comments(
     content_id: int,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     from sqlalchemy.orm import joinedload
@@ -52,7 +65,7 @@ def get_content_comments(
         )
     
     comments = db.query(Comment).options(joinedload(Comment.author)).filter(Comment.content_id == content_id).all()
-    return build_comment_tree(comments)
+    return build_comment_tree(comments, db, current_user)
 
 @router.post("/", response_model=CommentResponse)
 def create_comment(

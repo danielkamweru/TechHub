@@ -56,6 +56,7 @@ const NotificationCenter = () => {
       case 'status_change':
         return <CheckCircle className="w-4 h-4 text-purple-600" />
       case 'content_flagged':
+      case 'flag':
         return <AlertTriangle className="w-4 h-4 text-red-600" />
       case 'like_received':
       case 'like':
