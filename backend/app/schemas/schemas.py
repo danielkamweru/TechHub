@@ -5,6 +5,7 @@ from pydantic import (
     field_validator,
     model_validator,
     field_serializer,
+    ConfigDict,
 )
 from typing import Optional
 from datetime import datetime
@@ -51,8 +52,7 @@ class UserResponse(UserBase):
     is_active: bool
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # =========================
@@ -106,8 +106,7 @@ class CategoryResponse(CategoryBase):
     created_at: datetime
     created_by: Optional[int]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # =========================
@@ -154,8 +153,7 @@ class ContentResponse(ContentBase):
     comments_count: int = 0
     is_flagged: bool = False
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # =========================
@@ -182,8 +180,7 @@ class CommentResponse(CommentBase):
     likes_count: Optional[int] = 0
     is_liked: Optional[bool] = False
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # =========================
@@ -202,8 +199,7 @@ class LikeResponse(BaseModel):
     user_id: int
     content_id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # =========================
@@ -219,8 +215,7 @@ class NotificationResponse(BaseModel):
     notification_type: Optional[str] = None
     related_content_id: Optional[int] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
         
     @field_validator('notification_type', mode='before')
     @classmethod

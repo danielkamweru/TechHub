@@ -304,7 +304,7 @@ def get_pending_flags(
 @router.put("/flags/{flag_id}/resolve")
 def resolve_flag(
     flag_id: int,
-    action: str = Query(..., regex="^(approve|reject)$"),
+    action: str = Query(..., pattern="^(approve|reject)$"),
     admin_notes: Optional[str] = None,
     current_user: User = Depends(require_admin),
     db: Session = Depends(get_db)
