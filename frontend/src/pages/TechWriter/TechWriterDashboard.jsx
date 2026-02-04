@@ -109,7 +109,7 @@ const TechWriterDashboard = () => {
       dispatch(fetchContent())
     } catch (error) {
       console.error('Failed to update content:', error)
-      alert('Failed to update content. Please check your authentication and try again.')
+      // Error is already handled by the slice with toast
     }
   }
 
@@ -163,10 +163,12 @@ const TechWriterDashboard = () => {
       dispatch(fetchContent())
     } catch (error) {
       console.error('Failed to flag content:', error)
+      // Error is already handled by the slice with toast
     }
   }
 
-  const myContent = content?.filter(c => c.author_id === 1) || [] // Replace with actual user ID
+  const { user } = useSelector((state) => state.auth)
+  const myContent = content?.filter(c => c.author_id === user?.id) || [] // Use actual user ID
   const pendingContent = content?.filter(c => c.status === 'review') || []
   const publishedContent = content?.filter(c => c.status === 'published') || []
 

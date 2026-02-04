@@ -53,9 +53,17 @@ export const createContent = createAsyncThunk(
 
 export const updateContent = createAsyncThunk(
   'content/updateContent',
-  async ({ id, ...contentData }) => {
-    const response = await api.put(`/content/${id}`, contentData)
-    return response.data
+  async ({ id, ...contentData }, { rejectWithValue }) => {
+    try {
+      const response = await api.put(`/content/${id}`, contentData)
+      toast.success('Content updated successfully!')
+      return response.data
+    } catch (error) {
+      console.error('Update content error:', error.response?.data)
+      const errorMessage = error.response?.data?.detail || 'Failed to update content'
+      toast.error(errorMessage)
+      return rejectWithValue(errorMessage)
+    }
   }
 )
 
@@ -160,9 +168,17 @@ export const removeContent = createAsyncThunk(
 
 export const flagContent = createAsyncThunk(
   'content/flagContent',
-  async (contentId) => {
-    const response = await api.post(`/content/${contentId}/flag`)
-    return { contentId, ...response.data }
+  async ({ contentId, reason }, { rejectWithValue }) => {
+    try {
+      const response = await api.post(`/content/${contentId}/flag`, { reason })
+      toast.success('Content flagged successfully!')
+      return { contentId, ...response.data }
+    } catch (error) {
+      console.error('Flag content error:', error.response?.data)
+      const errorMessage = error.response?.data?.detail || 'Failed to flag content'
+      toast.error(errorMessage)
+      return rejectWithValue(errorMessage)
+    }
   }
 )
 

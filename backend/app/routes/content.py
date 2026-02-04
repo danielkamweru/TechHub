@@ -625,7 +625,9 @@ def approve_content(
                         related_content_id=content.id
                     )
                     db.add(notification)
-            db.commit()
+    
+    # Commit all notifications
+    db.commit()
 
     return {"message": "Content approved and published"}
 
@@ -846,6 +848,7 @@ def increment_views(
 @router.post("/{content_id}/flag")
 def flag_content(
     content_id: int,
+    flag_data: dict = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -860,7 +863,8 @@ def flag_content(
     content.is_flagged = not content.is_flagged
     db.commit()
     
-    return {"message": f"Content {'flagged' if content.is_flagged else 'unflagged'} successfully"}
+    action = "flagged" if content.is_flagged else "unflagged"
+    return {"message": f"Content {action} successfully", "is_flagged": content.is_flagged}
 
 @router.post("/{content_id}/unflag")
 def unflag_content(
