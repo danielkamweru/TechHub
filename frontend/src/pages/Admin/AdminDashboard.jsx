@@ -149,12 +149,12 @@ const AdminDashboard = () => {
           setShowContentDeleteConfirm(contentId)
           return
         case 'flag':
-          await dispatch(flagContent(contentId)).unwrap()
+          await dispatch(flagContent({ contentId, reason: 'Flagged by admin' })).unwrap()
           toast.success('Content flagged successfully!')
           break
         case 'unflag':
-          await dispatch(flagContent(contentId)).unwrap()
-          toast.success('Content returned successfully!')
+          await dispatch(unflagContent(contentId)).unwrap()
+          toast.success('Content unflagged successfully!')
           break
       }
       dispatch(fetchContent({ limit: 100, status: null })) // Refresh all content

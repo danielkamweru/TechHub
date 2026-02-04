@@ -44,7 +44,34 @@ export const createContent = createAsyncThunk(
       return response.data
     } catch (error) {
       console.error('Create content error:', error.response?.data)
-      const errorMessage = error.response?.data?.detail || 'Failed to create content'
+      // Handle different error response formats
+      let errorMessage = 'Failed to create content'
+      
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message
+      } else if (typeof error.response?.data === 'string') {
+        errorMessage = error.response.data
+      } else if (error.response?.data && typeof error.response.data === 'object') {
+        const validationError = error.response.data
+        if (validationError.detail && Array.isArray(validationError.detail)) {
+          errorMessage = validationError.detail.map(err => err.msg || err.message).join(', ')
+        } else if (validationError.msg) {
+          errorMessage = validationError.msg
+        } else if (validationError.message) {
+          errorMessage = validationError.message
+        } else {
+          errorMessage = 'Validation error occurred'
+        }
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
+      if (typeof errorMessage !== 'string') {
+        errorMessage = String(errorMessage)
+      }
+      
       toast.error(errorMessage)
       return rejectWithValue(errorMessage)
     }
@@ -60,7 +87,34 @@ export const updateContent = createAsyncThunk(
       return response.data
     } catch (error) {
       console.error('Update content error:', error.response?.data)
-      const errorMessage = error.response?.data?.detail || 'Failed to update content'
+      // Handle different error response formats
+      let errorMessage = 'Failed to update content'
+      
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message
+      } else if (typeof error.response?.data === 'string') {
+        errorMessage = error.response.data
+      } else if (error.response?.data && typeof error.response.data === 'object') {
+        const validationError = error.response.data
+        if (validationError.detail && Array.isArray(validationError.detail)) {
+          errorMessage = validationError.detail.map(err => err.msg || err.message).join(', ')
+        } else if (validationError.msg) {
+          errorMessage = validationError.msg
+        } else if (validationError.message) {
+          errorMessage = validationError.message
+        } else {
+          errorMessage = 'Validation error occurred'
+        }
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
+      if (typeof errorMessage !== 'string') {
+        errorMessage = String(errorMessage)
+      }
+      
       toast.error(errorMessage)
       return rejectWithValue(errorMessage)
     }
@@ -175,7 +229,41 @@ export const flagContent = createAsyncThunk(
       return { contentId, ...response.data }
     } catch (error) {
       console.error('Flag content error:', error.response?.data)
-      const errorMessage = error.response?.data?.detail || 'Failed to flag content'
+      // Handle different error response formats
+      let errorMessage = 'Failed to flag content'
+      
+      if (error.response?.data?.detail) {
+        // Handle FastAPI detail message
+        errorMessage = error.response.data.detail
+      } else if (error.response?.data?.message) {
+        // Handle custom message format
+        errorMessage = error.response.data.message
+      } else if (typeof error.response?.data === 'string') {
+        // Handle direct string response
+        errorMessage = error.response.data
+      } else if (error.response?.data && typeof error.response.data === 'object') {
+        // Handle FastAPI validation error object
+        const validationError = error.response.data
+        if (validationError.detail && Array.isArray(validationError.detail)) {
+          // Handle FastAPI validation errors array
+          errorMessage = validationError.detail.map(err => err.msg || err.message).join(', ')
+        } else if (validationError.msg) {
+          errorMessage = validationError.msg
+        } else if (validationError.message) {
+          errorMessage = validationError.message
+        } else {
+          // Fallback for object errors
+          errorMessage = 'Validation error occurred'
+        }
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
+      // Ensure errorMessage is a string
+      if (typeof errorMessage !== 'string') {
+        errorMessage = String(errorMessage)
+      }
+      
       toast.error(errorMessage)
       return rejectWithValue(errorMessage)
     }
@@ -184,9 +272,44 @@ export const flagContent = createAsyncThunk(
 
 export const unflagContent = createAsyncThunk(
   'content/unflagContent',
-  async (contentId) => {
-    const response = await api.post(`/content/${contentId}/unflag`)
-    return response.data
+  async (contentId, { rejectWithValue }) => {
+    try {
+      const response = await api.post(`/content/${contentId}/unflag`)
+      toast.success('Content unflagged successfully!')
+      return response.data
+    } catch (error) {
+      console.error('Unflag content error:', error.response?.data)
+      // Handle different error response formats
+      let errorMessage = 'Failed to unflag content'
+      
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message
+      } else if (typeof error.response?.data === 'string') {
+        errorMessage = error.response.data
+      } else if (error.response?.data && typeof error.response.data === 'object') {
+        const validationError = error.response.data
+        if (validationError.detail && Array.isArray(validationError.detail)) {
+          errorMessage = validationError.detail.map(err => err.msg || err.message).join(', ')
+        } else if (validationError.msg) {
+          errorMessage = validationError.msg
+        } else if (validationError.message) {
+          errorMessage = validationError.message
+        } else {
+          errorMessage = 'Validation error occurred'
+        }
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
+      if (typeof errorMessage !== 'string') {
+        errorMessage = String(errorMessage)
+      }
+      
+      toast.error(errorMessage)
+      return rejectWithValue(errorMessage)
+    }
   }
 )
 

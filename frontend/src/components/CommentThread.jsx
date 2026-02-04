@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { MessageCircle, ThumbsUp, Reply, Flag } from 'lucide-react'
+import { MessageCircle, ThumbsUp, Reply } from 'lucide-react'
 import { fetchComments, addComment, likeComment, reportComment } from '../features/comments/commentsSlice'
 
 const CommentThread = ({ contentId, comments: commentsProp }) => {
@@ -10,7 +10,7 @@ const CommentThread = ({ contentId, comments: commentsProp }) => {
   const comments = commentsProp ?? commentsFromStore ?? []
   const [newComment, setNewComment] = useState('')
   const [replyTo, setReplyTo] = useState(null)
-  const [replyText, setReplyText] = useState('')
+  const [replyTexts, setReplyTexts] = useState({}) // Store reply text for each comment
 
   useEffect(() => {
     if (contentId) {
@@ -37,6 +37,7 @@ const CommentThread = ({ contentId, comments: commentsProp }) => {
 
   const handleSubmitReply = async (e, parentId) => {
     e.preventDefault()
+    const replyText = replyTexts[parentId] || ''
     if (!replyText.trim() || !user) return
 
     try {
@@ -45,11 +46,13 @@ const CommentThread = ({ contentId, comments: commentsProp }) => {
         text: replyText,
         parentId
       })).unwrap()
-      setReplyText('')
+      
+      // Clear reply text for this specific comment
+      setReplyTexts(prev => ({ ...prev, [parentId]: '' }))
       setReplyTo(null)
       dispatch(fetchComments(contentId))
     } catch (error) {
-      console.error('Failed to add reply:', error)
+      console.error('Failed to add comment:', error)
     }
   }
 
@@ -102,30 +105,27 @@ const CommentThread = ({ contentId, comments: commentsProp }) => {
               <span>Reply</span>
             </button>
           )}
-          
-          {user && user.id !== comment.author_id && user.id !== comment.author?.id && (
-            <button 
-              onClick={() => handleReportComment(comment.id)}
-              className="flex items-center gap-1 text-gray-500 hover:text-red-600 transition-colors"
-            >
-              <Flag size={14} />
-              <span>Report</span>
-            </button>
-          )}
         </div>
         
         {replyTo === comment.id && (
           <form onSubmit={(e) => handleSubmitReply(e, comment.id)} className="mt-3">
-            <textarea
-              key={`reply-${comment.id}`}
-              value={replyText}
-              onChange={(e) => setReplyText(e.target.value)}
-              placeholder="Write a reply..."
-              className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              rows="4"
-              style={{ minHeight: '100px' }}
-              autoFocus
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={replyTexts[comment.id] || ''}
+                onChange={(e) => {
+                  console.log('Comment ID:', comment.id, 'Reply text:', e.target.value)
+                  setReplyTexts(prev => ({ ...prev, [comment.id]: e.target.value }))
+                }}
+                placeholder="Write a reply..."
+                className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-primary-500 focus:border-transparent textarea-ltr"
+                style={{ minHeight: '100px' }}
+                autoFocus
+              />
+              <div className="absolute top-2 right-2 text-xs text-gray-400 bg-white px-2 py-1 rounded">
+                Debug: {replyTexts[comment.id] || 'empty'}
+              </div>
+            </div>
             <div className="flex gap-2 mt-2">
               <button type="submit" className="btn-primary text-sm">
                 Reply
@@ -134,7 +134,7 @@ const CommentThread = ({ contentId, comments: commentsProp }) => {
                 type="button" 
                 onClick={() => {
                   setReplyTo(null)
-                  setReplyText('')
+                  setReplyTexts(prev => ({ ...prev, [comment.id]: '' }))
                 }}
                 className="btn-secondary text-sm"
               >
@@ -146,7 +146,7 @@ const CommentThread = ({ contentId, comments: commentsProp }) => {
       </div>
       
       {comment.replies?.map(reply => (
-        <Comment key={reply.id} comment={reply} isReply={true} />
+        <Comment key={`${comment.id}-reply-${reply.id}`} comment={reply} isReply={true} />
       ))}
     </div>
   )

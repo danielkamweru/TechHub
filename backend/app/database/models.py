@@ -50,6 +50,7 @@ class NotificationTypeEnum(enum.Enum):
     LIKE = "like"
     FOLLOW = "follow"
     SYSTEM = "system"
+    FLAG = "flag"
 
 class User(Base):
     __tablename__ = "users"

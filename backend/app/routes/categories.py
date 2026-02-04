@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.database.connection import get_db
-from app.database.models import User, Category
+from app.database.models import User, Category, Notification, NotificationTypeEnum
 from app.schemas.schemas import CategoryCreate, CategoryResponse
 from app.core.dependencies import get_current_user, require_tech_writer_or_admin
 
@@ -136,6 +136,19 @@ def subscribe_to_category(
     if category not in current_user.subscribed_categories:
         current_user.subscribed_categories.append(category)
         db.commit()
+        
+        # Notify category creator about new subscriber (if creator exists and is not the subscriber)
+        if category.created_by and category.created_by != current_user.id:
+            notification = Notification(
+                user_id=category.created_by,
+                notification_type=NotificationTypeEnum.FOLLOW,
+                title="New Category Subscriber",
+                message=f"{current_user.full_name or current_user.username} subscribed to your category '{category.name}'",
+                related_content_id=category.id
+            )
+            db.add(notification)
+            db.commit()
+        
         return {"message": "Subscribed to category successfully"}
     
     return {"message": "Already subscribed to this category"}

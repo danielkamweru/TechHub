@@ -863,6 +863,19 @@ def flag_content(
     content.is_flagged = not content.is_flagged
     db.commit()
     
+    # Create notification for content author when content is flagged
+    if content.is_flagged and content.author_id != current_user.id:
+        reason = flag_data.get('reason', 'No reason provided') if flag_data else 'No reason provided'
+        notification = Notification(
+            user_id=content.author_id,
+            notification_type=NotificationTypeEnum.FLAG,
+            title="Content Flagged",
+            message=f"Your content '{content.title}' has been flagged for review. Reason: {reason}",
+            related_content_id=content.id
+        )
+        db.add(notification)
+        db.commit()
+    
     action = "flagged" if content.is_flagged else "unflagged"
     return {"message": f"Content {action} successfully", "is_flagged": content.is_flagged}
 
@@ -881,5 +894,17 @@ def unflag_content(
     
     content.is_flagged = False
     db.commit()
+    
+    # Create notification for content author when content is unflagged
+    if content.author_id != current_user.id:
+        notification = Notification(
+            user_id=content.author_id,
+            notification_type=NotificationTypeEnum.STATUS_CHANGE,
+            title="Content Unflagged",
+            message=f"Your content '{content.title}' has been reviewed and unflagged. It is now visible to all users.",
+            related_content_id=content.id
+        )
+        db.add(notification)
+        db.commit()
     
     return {"message": "Content unflagged successfully"}

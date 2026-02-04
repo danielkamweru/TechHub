@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
-import { User, Mail, Edit2, Save, X, Github, Linkedin, Camera, Settings, Bell, BookOpen, Heart, Upload } from 'lucide-react'
+import { User, Mail, Edit2, Save, X, Github, Linkedin, Camera, Bell, BookOpen, Heart, Upload } from 'lucide-react'
 import { updateUserProfile } from '../features/auth/authSlice'
 import { fetchUserContent } from '../features/content/contentSlice'
 import { fetchUserWishlist } from '../features/wishlist/wishlistSlice'
@@ -135,8 +135,7 @@ const Profile = () => {
   const tabs = [
     { id: 'overview', label: 'Overview', icon: User },
     { id: 'content', label: 'My Content', icon: BookOpen },
-    { id: 'wishlist', label: 'Wishlist', icon: Heart },
-    { id: 'settings', label: 'Settings', icon: Settings }
+    { id: 'wishlist', label: 'Wishlist', icon: Heart }
   ]
 
   return (
@@ -506,42 +505,6 @@ const Profile = () => {
                   ) : (
                     <p className="text-gray-500">No items in wishlist yet.</p>
                   )}
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'settings' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Notification Settings</h3>
-                  <div className="space-y-3">
-                    <label className="flex items-center">
-                      <input type="checkbox" className="mr-2" defaultChecked />
-                      <span>Email notifications for new content in subscribed categories</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input type="checkbox" className="mr-2" defaultChecked />
-                      <span>Email notifications for comments on my content</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input type="checkbox" className="mr-2" />
-                      <span>Email notifications for likes on my content</span>
-                    </label>
-                  </div>
-                </div>
-                
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Privacy Settings</h3>
-                  <div className="space-y-3">
-                    <label className="flex items-center">
-                      <input type="checkbox" className="mr-2" defaultChecked />
-                      <span>Make profile public</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input type="checkbox" className="mr-2" />
-                      <span>Show email address publicly</span>
-                    </label>
-                  </div>
                 </div>
               </div>
             )}
