@@ -6,7 +6,7 @@ from app.database.models import User, RoleEnum
 from app.core.auth import verify_token
 
 security = HTTPBearer()
-
+""
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
